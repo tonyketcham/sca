@@ -1,11 +1,10 @@
 import type { ConfigState } from '../types/ui'
-
-const SCHEMA_VERSION = 1
+import { LATEST_SCHEMA_VERSION, migrateConfig } from './schemaMigrations'
 
 type CompactConfig = (number | string | null | CompactConfig)[]
 
 export function encodeConfig(config: ConfigState): string {
-  const compact = toCompact(config)
+  const compact = toCompact({ ...config, schemaVersion: LATEST_SCHEMA_VERSION })
   const json = JSON.stringify(compact)
   const compressed = lzwCompress(json)
   return base64UrlEncode(new Uint8Array(compressed.buffer))
@@ -16,7 +15,8 @@ export function decodeConfig(encoded: string): ConfigState | null {
     const bytes = base64UrlDecode(encoded)
     const json = lzwDecompress(new Uint16Array(bytes.buffer))
     const parsed = JSON.parse(json)
-    return fromCompact(parsed)
+    const raw = fromCompact(parsed)
+    return raw ? migrateConfig(raw) : null
   } catch {
     return null
   }
@@ -24,7 +24,7 @@ export function decodeConfig(encoded: string): ConfigState | null {
 
 function toCompact(config: ConfigState): CompactConfig {
   return [
-    SCHEMA_VERSION,
+    LATEST_SCHEMA_VERSION,
     [config.paper.width, config.paper.height, config.paper.unit === 'in' ? 0 : 1, config.paper.dpi],
     [
       config.params.influenceRadius,
@@ -69,7 +69,7 @@ function toCompact(config: ConfigState): CompactConfig {
 function fromCompact(input: unknown): ConfigState | null {
   if (!Array.isArray(input)) return null
   const version = Number(input[0])
-  if (version !== SCHEMA_VERSION) return null
+  if (!Number.isFinite(version)) return null
   const paper = input[1] as CompactConfig
   const params = input[2] as CompactConfig
   const obstacles = input[3] as CompactConfig
@@ -79,7 +79,7 @@ function fromCompact(input: unknown): ConfigState | null {
   if (!paper || !params || !obstacles || !render || !exportSettings) return null
 
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: version,
     paper: {
       width: Number(paper[0]),
       height: Number(paper[1]),
