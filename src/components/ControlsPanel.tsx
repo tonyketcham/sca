@@ -1,7 +1,8 @@
 import type { SimulationParams } from '../engine/simulationState'
 import type { Unit } from '../geometry/units'
 import type { RenderSettings } from '../render/canvasRenderer'
-import type { ObstacleSettings, PaperSettings, ExportSettings, StatsSummary } from '../types/ui'
+import { useState } from 'react'
+import type { ObstacleSettings, PaperSettings, ExportSettings, StatsSummary, SavedEntry } from '../types/ui'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -15,6 +16,9 @@ type ControlsPanelProps = {
   obstacles: ObstacleSettings
   renderSettings: RenderSettings
   exportSettings: ExportSettings
+  seed: number
+  randomizeSeed: boolean
+  savedEntries: SavedEntry[]
   stats: StatsSummary
   running: boolean
   onPaperChange: (next: PaperSettings) => void
@@ -28,6 +32,13 @@ type ControlsPanelProps = {
   onExportPng: () => void
   onExportSvg: () => void
   onExportMp4: () => void
+  onSeedChange: (next: number) => void
+  onRandomizeSeedChange: (next: boolean) => void
+  onSaveEntry: (name?: string) => void
+  onLoadEntry: (id: string) => void
+  onDeleteEntry: (id: string) => void
+  onPreviewEntry: (id: string) => void
+  onPreviewEnd: () => void
 }
 
 export default function ControlsPanel({
@@ -36,6 +47,9 @@ export default function ControlsPanel({
   obstacles,
   renderSettings,
   exportSettings,
+  seed,
+  randomizeSeed,
+  savedEntries,
   stats,
   running,
   onPaperChange,
@@ -48,8 +62,16 @@ export default function ControlsPanel({
   onRegenerateObstacles,
   onExportPng,
   onExportSvg,
-  onExportMp4
+  onExportMp4,
+  onSeedChange,
+  onRandomizeSeedChange,
+  onSaveEntry,
+  onLoadEntry,
+  onDeleteEntry,
+  onPreviewEntry,
+  onPreviewEnd
 }: ControlsPanelProps) {
+  const [saveName, setSaveName] = useState('')
   return (
     <div className="space-y-6 p-6">
       <header className="space-y-2">
@@ -153,6 +175,26 @@ export default function ControlsPanel({
           <Button onClick={onResetSimulation} variant="secondary" size="sm">
             Reset growth
           </Button>
+        </div>
+        <div className="grid gap-3">
+          <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-3 py-2">
+            <div>
+              <Label className="text-sm text-zinc-200">Randomize seed</Label>
+              <div className="text-xs text-zinc-500">Generate a new seed on reset.</div>
+            </div>
+            <Switch checked={randomizeSeed} onCheckedChange={onRandomizeSeedChange} />
+          </div>
+          <div className="space-y-1">
+            <Label>Seed</Label>
+            <ScrubbableNumberInput
+              min={0}
+              integer
+              value={seed}
+              onValueChange={onSeedChange}
+              disabled={randomizeSeed}
+              className={randomizeSeed ? 'opacity-60' : undefined}
+            />
+          </div>
         </div>
         <div className="grid gap-1 text-xs text-zinc-400">
           <div>Nodes: {stats.nodes}</div>
@@ -432,6 +474,59 @@ export default function ControlsPanel({
           <Button onClick={onExportMp4} variant="default" size="sm">
             Export MP4
           </Button>
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        <h2 className="text-sm font-semibold text-zinc-100">Saved Runs</h2>
+        <div className="space-y-2">
+          <Label>Name</Label>
+          <Input
+            value={saveName}
+            onChange={(event) => setSaveName(event.target.value)}
+            placeholder="New save name"
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              onSaveEntry(saveName)
+              setSaveName('')
+            }}
+          >
+            Save current
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {savedEntries.length === 0 ? (
+            <div className="text-xs text-zinc-500">No saved runs yet.</div>
+          ) : (
+            savedEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-xs text-zinc-300"
+                onMouseEnter={() => onPreviewEntry(entry.id)}
+                onMouseLeave={onPreviewEnd}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm text-zinc-100">{entry.name}</div>
+                    <div className="text-xs text-zinc-500">
+                      Seed: {entry.seed} {entry.randomizeSeed ? '(random)' : '(fixed)'}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => onLoadEntry(entry.id)}>
+                      Load
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => onDeleteEntry(entry.id)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
     </div>

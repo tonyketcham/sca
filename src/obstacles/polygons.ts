@@ -1,4 +1,5 @@
 import type { Bounds, Vec2 } from '../engine/simulationState'
+import type { Rng } from '../utils/rng'
 
 export type Polygon = Vec2[]
 
@@ -11,33 +12,35 @@ export type ObstacleConfig = {
   margin: number
 }
 
-function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min)
+function randomInRange(rng: Rng, min: number, max: number): number {
+  return min + rng() * (max - min)
 }
 
-export function generatePolygons(bounds: Bounds, config: ObstacleConfig): Polygon[] {
+export function generatePolygons(bounds: Bounds, config: ObstacleConfig, rng: Rng = Math.random): Polygon[] {
   const polygons: Polygon[] = []
   const maxAttempts = config.count * 20
   let attempts = 0
 
   while (polygons.length < config.count && attempts < maxAttempts) {
     attempts += 1
-    const vertexCount = Math.round(randomInRange(config.minVertices, config.maxVertices))
-    const radius = randomInRange(config.minRadius, config.maxRadius)
+    const vertexCount = Math.round(randomInRange(rng, config.minVertices, config.maxVertices))
+    const radius = randomInRange(rng, config.minRadius, config.maxRadius)
     const cx = randomInRange(
+      rng,
       config.margin + radius,
       bounds.width - config.margin - radius
     )
     const cy = randomInRange(
+      rng,
       config.margin + radius,
       bounds.height - config.margin - radius
     )
 
-    const angles = Array.from({ length: vertexCount }, () => Math.random() * Math.PI * 2).sort(
+    const angles = Array.from({ length: vertexCount }, () => rng() * Math.PI * 2).sort(
       (a, b) => a - b
     )
     const points = angles.map((angle) => {
-      const jitter = randomInRange(0.65, 1)
+      const jitter = randomInRange(rng, 0.65, 1)
       const r = radius * jitter
       return {
         x: cx + Math.cos(angle) * r,

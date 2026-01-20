@@ -3,6 +3,7 @@ import type { RenderSettings } from '../render/canvasRenderer'
 import { renderSimulation } from '../render/canvasRenderer'
 import type { SimulationParams, SimulationState } from '../engine/simulationState'
 import { createSimulationState } from '../engine/simulationState'
+import { createSeededRng } from '../utils/rng'
 import { stepSimulation } from '../engine/spaceColonization'
 
 type Mp4Options = {
@@ -13,6 +14,7 @@ type Mp4Options = {
   durationSeconds: number
   durationMode: 'fixed' | 'auto'
   stepsPerFrame: number
+  seed: number
 }
 
 export async function encodeSimulationMp4(options: Mp4Options): Promise<Blob> {
@@ -60,10 +62,12 @@ export async function encodeSimulationMp4(options: Mp4Options): Promise<Blob> {
     framerate: options.fps
   })
 
+  const rng = createSeededRng(options.seed + 1)
   const state = createSimulationState(
     { width, height },
     options.params,
-    options.state.obstacles.map((polygon) => polygon.map((point) => ({ ...point })))
+    options.state.obstacles.map((polygon) => polygon.map((point) => ({ ...point }))),
+    rng
   )
   const frameDurationUs = 1_000_000 / options.fps
 

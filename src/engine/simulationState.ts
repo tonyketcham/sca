@@ -1,4 +1,5 @@
 import { isPointInPolygon, type Polygon } from '../obstacles/polygons'
+import type { Rng } from '../utils/rng'
 
 export type Vec2 = {
   x: number
@@ -40,10 +41,11 @@ export type SimulationState = {
 export function createSimulationState(
   bounds: Bounds,
   params: SimulationParams,
-  obstacles: Polygon[]
+  obstacles: Polygon[],
+  rng: Rng = Math.random
 ): SimulationState {
   const nodes = createSeedNodes(bounds, params)
-  const attractors = createAttractors(bounds, params, obstacles)
+  const attractors = createAttractors(bounds, params, obstacles, rng)
   return {
     bounds,
     nodes,
@@ -80,7 +82,12 @@ function createSeedNodes(bounds: Bounds, params: SimulationParams): Node[] {
   }))
 }
 
-function createAttractors(bounds: Bounds, params: SimulationParams, obstacles: Polygon[]): Attractor[] {
+function createAttractors(
+  bounds: Bounds,
+  params: SimulationParams,
+  obstacles: Polygon[],
+  rng: Rng
+): Attractor[] {
   const attractors: Attractor[] = []
   const maxAttempts = params.attractorCount * 20
   let attempts = 0
@@ -88,8 +95,8 @@ function createAttractors(bounds: Bounds, params: SimulationParams, obstacles: P
   while (attractors.length < params.attractorCount && attempts < maxAttempts) {
     attempts += 1
     const point = {
-      x: Math.random() * bounds.width,
-      y: Math.random() * bounds.height
+      x: rng() * bounds.width,
+      y: rng() * bounds.height
     }
     if (!isPointInsideAnyObstacle(point, obstacles)) {
       attractors.push(point)

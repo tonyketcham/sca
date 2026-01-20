@@ -29,3 +29,24 @@ export type StatsSummary = {
   iterations: number
   completed: boolean
 }
+
+export type ConfigState = {
+  schemaVersion: number
+  paper: PaperSettings
+  params: import('../engine/simulationState').SimulationParams
+  obstacles: ObstacleSettings
+  renderSettings: import('../render/canvasRenderer').RenderSettings
+  exportSettings: ExportSettings
+  seed: number
+  randomizeSeed: boolean
+}
+
+export type SavedEntry = {
+  id: string
+  name: string
+  createdAt: number
+  updatedAt: number
+  seed: number
+  randomizeSeed: boolean
+  payload: string
+}

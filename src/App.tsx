@@ -8,7 +8,10 @@ import { generatePolygons, type Polygon } from './obstacles/polygons'
 import { renderSimulation, type RenderSettings } from './render/canvasRenderer'
 import { exportSvg } from './export/svgExporter'
 import { encodeSimulationMp4 } from './export/webcodecsMp4'
-import type { ExportSettings, ObstacleSettings, PaperSettings, StatsSummary } from './types/ui'
+import type { ConfigState, ExportSettings, ObstacleSettings, PaperSettings, StatsSummary } from './types/ui'
+import { useSavedConfigs } from './hooks/useSavedConfigs'
+import { decodeConfig, encodeConfig } from './utils/serialize'
+import { createSeed, createSeededRng } from './utils/rng'
 
 const DEFAULT_PAPER: PaperSettings = {
   width: 8.5,
@@ -64,6 +67,8 @@ export default function App() {
   const [exportSettings, setExportSettings] = useState<ExportSettings>(DEFAULT_EXPORT)
   const [obstacles, setObstacles] = useState<Polygon[]>([])
   const [running, setRunning] = useState(true)
+  const [seed, setSeed] = useState(() => createSeed())
+  const [randomizeSeed, setRandomizeSeed] = useState(true)
   const [stats, setStats] = useState<StatsSummary>({
     nodes: 0,
     attractors: 0,
@@ -73,6 +78,10 @@ export default function App() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const paramsRef = useRef(params)
+  const hydratingRef = useRef(true)
+  const previewConfigRef = useRef<ConfigState | null>(null)
+  const previewRunningRef = useRef<boolean>(running)
+  const urlUpdateRef = useRef<number | null>(null)
   const simulationRef = useRef<SimulationState>(
     createSimulationState(
       { width: 0, height: 0 },
@@ -93,32 +102,67 @@ export default function App() {
     [paper]
   )
 
-  const regenerateObstacles = useCallback(() => {
-    const minRadiusPx = unitsToPx(obstacleSettings.minRadius, paper.unit, paper.dpi)
-    const maxRadiusPx = unitsToPx(obstacleSettings.maxRadius, paper.unit, paper.dpi)
-    const marginPx = unitsToPx(obstacleSettings.margin, paper.unit, paper.dpi)
-    const polygons = generatePolygons(boundsPx, {
-      count: obstacleSettings.count,
-      minVertices: obstacleSettings.minVertices,
-      maxVertices: obstacleSettings.maxVertices,
-      minRadius: minRadiusPx,
-      maxRadius: maxRadiusPx,
-      margin: marginPx
-    })
-    setObstacles(polygons)
-  }, [boundsPx, obstacleSettings, paper.dpi, paper.unit])
+  const buildObstacles = useCallback(
+    (seedValue: number) => {
+      const rng = createSeededRng(seedValue)
+      const minRadiusPx = unitsToPx(obstacleSettings.minRadius, paper.unit, paper.dpi)
+      const maxRadiusPx = unitsToPx(obstacleSettings.maxRadius, paper.unit, paper.dpi)
+      const marginPx = unitsToPx(obstacleSettings.margin, paper.unit, paper.dpi)
+      return generatePolygons(
+        boundsPx,
+        {
+          count: obstacleSettings.count,
+          minVertices: obstacleSettings.minVertices,
+          maxVertices: obstacleSettings.maxVertices,
+          minRadius: minRadiusPx,
+          maxRadius: maxRadiusPx,
+          margin: marginPx
+        },
+        rng
+      )
+    },
+    [boundsPx, obstacleSettings, paper.dpi, paper.unit]
+  )
 
-  const resetSimulation = useCallback(() => {
-    simulationRef.current = createSimulationState(boundsPx, paramsRef.current, obstacles)
-  }, [boundsPx, obstacles])
+  const regenerateObstacles = useCallback(
+    (shouldRandomize = false) => {
+      const nextSeed = shouldRandomize && randomizeSeed ? createSeed() : seed
+      if (shouldRandomize && randomizeSeed) {
+        setSeed(nextSeed)
+      }
+      const polygons = buildObstacles(nextSeed)
+      setObstacles(polygons)
+    },
+    [buildObstacles, randomizeSeed, seed]
+  )
 
-  useEffect(() => {
-    regenerateObstacles()
+  const resetSimulation = useCallback(
+    (seedValue: number) => {
+      const rng = createSeededRng(seedValue + 1)
+      simulationRef.current = createSimulationState(boundsPx, paramsRef.current, obstacles, rng)
+    },
+    [boundsPx, obstacles]
+  )
+
+  const handleResetSimulation = useCallback(() => {
+    const nextSeed = randomizeSeed ? createSeed() : seed
+    if (randomizeSeed) {
+      setSeed(nextSeed)
+    }
+    resetSimulation(nextSeed)
+  }, [randomizeSeed, resetSimulation, seed])
+
+  const handleRegenerateObstacles = useCallback(() => {
+    regenerateObstacles(true)
   }, [regenerateObstacles])
 
   useEffect(() => {
-    resetSimulation()
-  }, [resetSimulation, obstacles])
+    regenerateObstacles(false)
+  }, [regenerateObstacles, seed])
+
+  useEffect(() => {
+    resetSimulation(seed)
+  }, [resetSimulation, obstacles, seed])
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -175,7 +219,8 @@ export default function App() {
         fps: exportSettings.fps,
         durationSeconds: exportSettings.durationSeconds,
         durationMode: exportSettings.durationMode,
-        stepsPerFrame: exportSettings.stepsPerFrame
+        stepsPerFrame: exportSettings.stepsPerFrame,
+        seed
       })
       downloadBlob(blob, `root-growth-${Date.now()}.mp4`)
     } catch (error) {
@@ -188,6 +233,116 @@ export default function App() {
     setRunning((value) => !value)
   }, [])
 
+  const configState = useMemo<ConfigState>(
+    () => ({
+      schemaVersion: 1,
+      paper,
+      params,
+      obstacles: obstacleSettings,
+      renderSettings,
+      exportSettings,
+      seed,
+      randomizeSeed
+    }),
+    [paper, params, obstacleSettings, renderSettings, exportSettings, seed, randomizeSeed]
+  )
+
+  const { savedEntries, saveManualEntry, deleteEntry, getEntryConfig, currentConfig } = useSavedConfigs(
+    configState,
+    { enabled: !hydratingRef.current && previewConfigRef.current === null }
+  )
+
+  const normalizeConfig = useCallback((config: ConfigState): ConfigState => {
+    return {
+      schemaVersion: 1,
+      paper: { ...DEFAULT_PAPER, ...config.paper },
+      params: { ...DEFAULT_PARAMS, ...config.params },
+      obstacles: { ...DEFAULT_OBSTACLES, ...config.obstacles },
+      renderSettings: { ...DEFAULT_RENDER, ...config.renderSettings },
+      exportSettings: { ...DEFAULT_EXPORT, ...config.exportSettings },
+      seed: Number.isFinite(config.seed) ? config.seed : createSeed(),
+      randomizeSeed: typeof config.randomizeSeed === 'boolean' ? config.randomizeSeed : true
+    }
+  }, [])
+
+  const applyConfig = useCallback((config: ConfigState) => {
+    const normalized = normalizeConfig(config)
+    setPaper(normalized.paper)
+    setParams(normalized.params)
+    setObstacleSettings(normalized.obstacles)
+    setRenderSettings(normalized.renderSettings)
+    setExportSettings(normalized.exportSettings)
+    setSeed(normalized.seed)
+    setRandomizeSeed(normalized.randomizeSeed)
+  }, [normalizeConfig])
+
+  useEffect(() => {
+    if (!hydratingRef.current) return
+    const url = new URL(window.location.href)
+    const fromUrl = url.searchParams.get('cfg')
+    if (fromUrl) {
+      const decoded = decodeConfig(fromUrl)
+      if (decoded) {
+        applyConfig(decoded)
+        hydratingRef.current = false
+        return
+      }
+    }
+    if (currentConfig) {
+      applyConfig(currentConfig)
+    }
+    hydratingRef.current = false
+  }, [applyConfig, currentConfig])
+
+  useEffect(() => {
+    if (hydratingRef.current || previewConfigRef.current) return
+    if (urlUpdateRef.current) {
+      window.clearTimeout(urlUpdateRef.current)
+    }
+    urlUpdateRef.current = window.setTimeout(() => {
+      const url = new URL(window.location.href)
+      const encoded = encodeConfig(configState)
+      url.searchParams.set('cfg', encoded)
+      window.history.replaceState({}, '', url.toString())
+    }, 250)
+    return () => {
+      if (urlUpdateRef.current) {
+        window.clearTimeout(urlUpdateRef.current)
+      }
+    }
+  }, [configState])
+
+  const handlePreviewEntry = useCallback(
+    (id: string) => {
+      if (previewConfigRef.current) return
+      const config = getEntryConfig(id)
+      if (!config) return
+      previewConfigRef.current = configState
+      previewRunningRef.current = running
+      setRunning(true)
+      applyConfig(normalizeConfig(config))
+    },
+    [applyConfig, configState, getEntryConfig, normalizeConfig, running]
+  )
+
+  const handlePreviewEnd = useCallback(() => {
+    if (!previewConfigRef.current) return
+    const restore = previewConfigRef.current
+    previewConfigRef.current = null
+    applyConfig(restore)
+    setRunning(previewRunningRef.current)
+  }, [applyConfig])
+
+  const handleLoadEntry = useCallback(
+    (id: string) => {
+      const config = getEntryConfig(id)
+      if (!config) return
+      previewConfigRef.current = null
+      applyConfig(normalizeConfig(config))
+    },
+    [applyConfig, getEntryConfig, normalizeConfig]
+  )
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-950">
       <aside className="h-screen w-[360px] border-r border-zinc-800 bg-zinc-950">
@@ -198,6 +353,9 @@ export default function App() {
             obstacles={obstacleSettings}
             renderSettings={renderSettings}
             exportSettings={exportSettings}
+            seed={seed}
+            randomizeSeed={randomizeSeed}
+            savedEntries={savedEntries}
             stats={stats}
             running={running}
             onPaperChange={setPaper}
@@ -209,11 +367,18 @@ export default function App() {
             onRenderSettingsChange={setRenderSettings}
             onExportSettingsChange={setExportSettings}
             onToggleRunning={handleToggleRunning}
-            onResetSimulation={resetSimulation}
-            onRegenerateObstacles={regenerateObstacles}
+            onResetSimulation={handleResetSimulation}
+            onRegenerateObstacles={handleRegenerateObstacles}
             onExportPng={handleExportPng}
             onExportSvg={handleExportSvg}
             onExportMp4={handleExportMp4}
+            onSeedChange={setSeed}
+            onRandomizeSeedChange={setRandomizeSeed}
+            onSaveEntry={saveManualEntry}
+            onLoadEntry={handleLoadEntry}
+            onDeleteEntry={deleteEntry}
+            onPreviewEntry={handlePreviewEntry}
+            onPreviewEnd={handlePreviewEnd}
           />
         </ScrollArea>
       </aside>
