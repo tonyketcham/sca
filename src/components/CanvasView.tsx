@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, type MutableRefObject, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import type { SimulationParams, SimulationState, Vec2 } from '../engine/simulationState'
 import { stepSimulation } from '../engine/spaceColonization'
 import { getArtboardOrigin, renderSimulation, type RenderSettings, type ViewTransform } from '../render/canvasRenderer'
 
 type CanvasViewProps = {
-  simulationRef: MutableRefObject<SimulationState>
-  paramsRef: MutableRefObject<SimulationParams>
+  simulationRef: RefObject<SimulationState>
+  paramsRef: RefObject<SimulationParams>
   running: boolean
   renderSettings: RenderSettings
-  canvasRef: RefObject<HTMLCanvasElement>
+  canvasRef: RefObject<HTMLCanvasElement | null>
 }
 
 const MIN_ZOOM = 0.2
@@ -71,18 +71,10 @@ export default function CanvasView({
       viewRef.current.pan.y += deltaY
     }
 
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault()
+    const applyZoom = (pointer: Vec2, nextZoom: number) => {
       const canvas = canvasRef.current
       if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const pointer = {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      }
-
-      const { zoom, pan } = viewRef.current
-      const nextZoom = clamp(zoom * Math.exp(-event.deltaY * 0.001), MIN_ZOOM, MAX_ZOOM)
+      const { zoom } = viewRef.current
       if (nextZoom === zoom) return
 
       const origin = getArtboardOrigin(canvas.width, canvas.height, simulationRef.current.bounds, viewRef.current)
@@ -100,6 +92,29 @@ export default function CanvasView({
         x: nextOrigin.x - (canvas.width - simulationRef.current.bounds.width * nextZoom) * 0.5,
         y: nextOrigin.y - (canvas.height - simulationRef.current.bounds.height * nextZoom) * 0.5
       }
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const rect = canvas.getBoundingClientRect()
+      const pointer = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      }
+
+      let delta = event.deltaY
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+        delta *= 16
+      } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+        delta *= canvas.height
+      }
+
+      const zoomSpeed = event.ctrlKey ? 0.025 : 0.015
+      const { zoom } = viewRef.current
+      const nextZoom = clamp(zoom * Math.exp(-delta * zoomSpeed), MIN_ZOOM, MAX_ZOOM)
+      applyZoom(pointer, nextZoom)
     }
 
     canvas.addEventListener('pointerdown', onPointerDown)
@@ -159,7 +174,7 @@ export default function CanvasView({
     () => (
       <div className="pointer-events-none absolute bottom-4 right-4 text-xs text-zinc-500">
         <div>Drag to pan</div>
-        <div>Scroll to zoom</div>
+        <div>Pinch or scroll to zoom</div>
       </div>
     ),
     []
