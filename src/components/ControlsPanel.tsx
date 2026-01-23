@@ -2,7 +2,15 @@ import type { SimulationParams } from '../engine/simulationState'
 import type { Unit } from '../geometry/units'
 import type { RenderSettings } from '../render/canvasRenderer'
 import { useState } from 'react'
-import type { ObstacleSettings, PaperSettings, ExportSettings, StatsSummary, SavedEntry } from '../types/ui'
+import type {
+  ObstacleSettings,
+  PaperSettings,
+  ExportSettings,
+  StatsSummary,
+  SavedEntry,
+  TemplateGridSettings,
+  FrameConfig
+} from '../types/ui'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
@@ -13,6 +21,9 @@ import { useUiContextState } from '../hooks/useUiContext'
 
 type ControlsPanelProps = {
   paper: PaperSettings
+  templateGrid: TemplateGridSettings
+  frames: FrameConfig[]
+  activeFrameIndex: number
   params: SimulationParams
   obstacles: ObstacleSettings
   renderSettings: RenderSettings
@@ -23,6 +34,8 @@ type ControlsPanelProps = {
   stats: StatsSummary
   running: boolean
   onPaperChange: (next: PaperSettings) => void
+  onTemplateGridChange: (next: TemplateGridSettings) => void
+  onActiveFrameChange: (index: number) => void
   onParamsChange: (next: SimulationParams) => void
   onObstacleChange: (next: ObstacleSettings) => void
   onRenderSettingsChange: (next: RenderSettings) => void
@@ -42,10 +55,13 @@ type ControlsPanelProps = {
   onPreviewEnd: () => void
 }
 
-type SectionKey = 'simulation' | 'paper' | 'obstacles' | 'rendering' | 'export' | 'saved'
+type SectionKey = 'simulation' | 'template' | 'paper' | 'obstacles' | 'rendering' | 'export' | 'saved'
 
 export default function ControlsPanel({
   paper,
+  templateGrid,
+  frames,
+  activeFrameIndex,
   params,
   obstacles,
   renderSettings,
@@ -56,6 +72,8 @@ export default function ControlsPanel({
   stats,
   running,
   onPaperChange,
+  onTemplateGridChange,
+  onActiveFrameChange,
   onParamsChange,
   onObstacleChange,
   onRenderSettingsChange,
@@ -77,6 +95,7 @@ export default function ControlsPanel({
   const [saveName, setSaveName] = useState('')
   const defaultSections: Record<SectionKey, boolean> = {
     simulation: true,
+    template: true,
     paper: false,
     obstacles: false,
     rendering: false,
@@ -312,6 +331,89 @@ export default function ControlsPanel({
                 <div>Attractors: {stats.attractors}</div>
                 <div>Iterations: {stats.iterations}</div>
                 <div>Status: {stats.completed ? 'Complete' : 'Growing'}</div>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <section className="space-y-3 px-4 py-3">
+          {renderSectionHeader('Template Grid', 'template')}
+          {openSections.template ? (
+            <div id="section-template" className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label>Rows</Label>
+                  <ScrubbableNumberInput
+                    min={1}
+                    integer
+                    value={templateGrid.rows}
+                    onValueChange={(next) => onTemplateGridChange({ ...templateGrid, rows: next })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Columns</Label>
+                  <ScrubbableNumberInput
+                    min={1}
+                    integer
+                    value={templateGrid.cols}
+                    onValueChange={(next) => onTemplateGridChange({ ...templateGrid, cols: next })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Gutter ({paper.unit})</Label>
+                  <ScrubbableNumberInput
+                    min={0}
+                    step={0.1}
+                    value={templateGrid.gutter}
+                    onValueChange={(next) => onTemplateGridChange({ ...templateGrid, gutter: next })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Active frame</Label>
+                  <Select
+                    value={String(activeFrameIndex)}
+                    onValueChange={(value) => onActiveFrameChange(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {frames.map((_, index) => {
+                        const row = Math.floor(index / Math.max(1, templateGrid.cols))
+                        const col = index % Math.max(1, templateGrid.cols)
+                        return (
+                          <SelectItem key={`frame-${index}`} value={String(index)}>
+                            {`Frame ${index + 1} (R${row + 1}, C${col + 1})`}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                  <div>
+                    <Label className="text-[11px] text-zinc-200">Show gutter</Label>
+                    <div className="text-[10px] text-zinc-500">Display grid margins in the editor.</div>
+                  </div>
+                  <Switch
+                    checked={templateGrid.showGutter}
+                    onCheckedChange={(checked) => onTemplateGridChange({ ...templateGrid, showGutter: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                  <div>
+                    <Label className="text-[11px] text-zinc-200">Gutter as obstacles</Label>
+                    <div className="text-[10px] text-zinc-500">Prevent growth inside the gutter margins.</div>
+                  </div>
+                  <Switch
+                    checked={templateGrid.gutterAsObstacles}
+                    onCheckedChange={(checked) =>
+                      onTemplateGridChange({ ...templateGrid, gutterAsObstacles: checked })
+                    }
+                  />
+                </div>
               </div>
             </div>
           ) : null}

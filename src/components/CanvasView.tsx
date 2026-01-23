@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react'
-import type { SimulationParams, SimulationState, Vec2 } from '../engine/simulationState'
+import type { SimulationState, Vec2 } from '../engine/simulationState'
 import { stepSimulation } from '../engine/spaceColonization'
-import { getArtboardOrigin, renderSimulation, type RenderSettings, type ViewTransform } from '../render/canvasRenderer'
+import { getArtboardOrigin, renderComposite, type GridLayout, type ViewTransform } from '../render/canvasRenderer'
+import type { FrameConfig, TemplateGridSettings } from '../types/ui'
 
 type CanvasViewProps = {
-  simulationRef: RefObject<SimulationState>
-  paramsRef: RefObject<SimulationParams>
+  simulationRef: RefObject<SimulationState[]>
+  framesRef: RefObject<FrameConfig[]>
+  gridLayout: GridLayout
+  templateGrid: TemplateGridSettings
   running: boolean
-  renderSettings: RenderSettings
   canvasRef: RefObject<HTMLCanvasElement | null>
 }
 
@@ -16,9 +18,10 @@ const MAX_ZOOM = 4
 
 export default function CanvasView({
   simulationRef,
-  paramsRef,
+  framesRef,
+  gridLayout,
+  templateGrid,
   running,
-  renderSettings,
   canvasRef
 }: CanvasViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -77,7 +80,11 @@ export default function CanvasView({
       const { zoom } = viewRef.current
       if (nextZoom === zoom) return
 
-      const origin = getArtboardOrigin(canvas.width, canvas.height, simulationRef.current.bounds, viewRef.current)
+      const bounds = {
+        width: gridLayout.cellWidth * gridLayout.cols,
+        height: gridLayout.cellHeight * gridLayout.rows
+      }
+      const origin = getArtboardOrigin(canvas.width, canvas.height, bounds, viewRef.current)
       const worldPoint = {
         x: (pointer.x - origin.x) / zoom,
         y: (pointer.y - origin.y) / zoom
@@ -89,8 +96,8 @@ export default function CanvasView({
 
       viewRef.current.zoom = nextZoom
       viewRef.current.pan = {
-        x: nextOrigin.x - (canvas.width - simulationRef.current.bounds.width * nextZoom) * 0.5,
-        y: nextOrigin.y - (canvas.height - simulationRef.current.bounds.height * nextZoom) * 0.5
+        x: nextOrigin.x - (canvas.width - bounds.width * nextZoom) * 0.5,
+        y: nextOrigin.y - (canvas.height - bounds.height * nextZoom) * 0.5
       }
     }
 
@@ -140,22 +147,29 @@ export default function CanvasView({
     if (!ctx) return
 
     const animate = () => {
-      const state = simulationRef.current
-      const params = paramsRef.current
+      const frames = framesRef.current
+      const states = simulationRef.current
 
-      if (running && !state.completed) {
-        for (let i = 0; i < params.stepsPerFrame; i += 1) {
-          stepSimulation(state, params)
-          if (state.completed) break
+      if (running) {
+        for (let index = 0; index < states.length; index += 1) {
+          const state = states[index]
+          const frame = frames[index]
+          if (!state || !frame || state.completed) continue
+          for (let i = 0; i < frame.params.stepsPerFrame; i += 1) {
+            stepSimulation(state, frame.params)
+            if (state.completed) break
+          }
         }
       }
 
-      renderSimulation(ctx, state, {
+      renderComposite(ctx, states, {
         canvasWidth: canvas.width,
         canvasHeight: canvas.height,
         view: viewRef.current,
         mode: 'editor',
-        settings: renderSettings
+        grid: gridLayout,
+        frames,
+        templateGrid
       })
 
       frameRef.current = requestAnimationFrame(animate)
@@ -168,7 +182,7 @@ export default function CanvasView({
         cancelAnimationFrame(frameRef.current)
       }
     }
-  }, [canvasRef, paramsRef, renderSettings, running, simulationRef])
+  }, [canvasRef, framesRef, gridLayout, running, simulationRef, templateGrid])
 
   const viewHints = useMemo(
     () => (

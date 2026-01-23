@@ -23,6 +23,23 @@ export type ExportSettings = {
   durationMode: 'fixed' | 'auto'
 }
 
+export type TemplateGridSettings = {
+  rows: number
+  cols: number
+  gutter: number
+  showGutter: boolean
+  gutterAsObstacles: boolean
+}
+
+export type FrameConfig = {
+  params: import('../engine/simulationState').SimulationParams
+  obstacles: ObstacleSettings
+  renderSettings: import('../render/canvasRenderer').RenderSettings
+  exportSettings: ExportSettings
+  seed: number
+  randomizeSeed: boolean
+}
+
 export type StatsSummary = {
   nodes: number
   attractors: number
@@ -33,12 +50,9 @@ export type StatsSummary = {
 export type ConfigState = {
   schemaVersion: number
   paper: PaperSettings
-  params: import('../engine/simulationState').SimulationParams
-  obstacles: ObstacleSettings
-  renderSettings: import('../render/canvasRenderer').RenderSettings
-  exportSettings: ExportSettings
-  seed: number
-  randomizeSeed: boolean
+  templateGrid: TemplateGridSettings
+  frames: FrameConfig[]
+  activeFrameIndex: number
 }
 
 export type SavedEntry = {

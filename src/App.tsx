@@ -2,13 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CanvasView from './components/CanvasView'
 import ControlsPanel from './components/ControlsPanel'
 import { ScrollArea } from './components/ui/scroll-area'
-import { createSimulationState, type SimulationParams, type SimulationState } from './engine/simulationState'
+import { createSimulationState, type Bounds, type SimulationParams, type SimulationState } from './engine/simulationState'
 import { unitsToPx } from './geometry/units'
 import { generatePolygons, type Polygon } from './obstacles/polygons'
-import { renderSimulation, type RenderSettings } from './render/canvasRenderer'
-import { exportSvg } from './export/svgExporter'
-import { encodeSimulationMp4 } from './export/webcodecsMp4'
-import type { ConfigState, ExportSettings, ObstacleSettings, PaperSettings, StatsSummary } from './types/ui'
+import { renderComposite, type RenderSettings } from './render/canvasRenderer'
+import { exportCompositeSvg } from './export/svgExporter'
+import { encodeCompositeMp4 } from './export/webcodecsMp4'
+import type {
+  ConfigState,
+  ExportSettings,
+  FrameConfig,
+  ObstacleSettings,
+  PaperSettings,
+  StatsSummary,
+  TemplateGridSettings
+} from './types/ui'
 import { useSavedConfigs } from './hooks/useSavedConfigs'
 import { decodeConfig, encodeConfig } from './utils/serialize'
 import { createSeed, createSeededRng } from './utils/rng'
@@ -63,16 +71,39 @@ const DEFAULT_EXPORT: ExportSettings = {
   durationMode: 'fixed'
 }
 
+const DEFAULT_TEMPLATE_GRID: TemplateGridSettings = {
+  rows: 1,
+  cols: 1,
+  gutter: 0,
+  showGutter: true,
+  gutterAsObstacles: false
+}
+
+type GridCellLayout = {
+  index: number
+  row: number
+  col: number
+  offset: { x: number; y: number }
+  bounds: Bounds
+}
+
+function createDefaultFrame(): FrameConfig {
+  return {
+    params: { ...DEFAULT_PARAMS },
+    obstacles: { ...DEFAULT_OBSTACLES },
+    renderSettings: { ...DEFAULT_RENDER },
+    exportSettings: { ...DEFAULT_EXPORT },
+    seed: createSeed(),
+    randomizeSeed: true
+  }
+}
+
 export default function App() {
   const [paper, setPaper] = useState<PaperSettings>(DEFAULT_PAPER)
-  const [params, setParams] = useState<SimulationParams>(DEFAULT_PARAMS)
-  const [obstacleSettings, setObstacleSettings] = useState<ObstacleSettings>(DEFAULT_OBSTACLES)
-  const [renderSettings, setRenderSettings] = useState<RenderSettings>(DEFAULT_RENDER)
-  const [exportSettings, setExportSettings] = useState<ExportSettings>(DEFAULT_EXPORT)
-  const [obstacles, setObstacles] = useState<Polygon[]>([])
+  const [templateGrid, setTemplateGrid] = useState<TemplateGridSettings>(DEFAULT_TEMPLATE_GRID)
+  const [frames, setFrames] = useState<FrameConfig[]>(() => [createDefaultFrame()])
+  const [activeFrameIndex, setActiveFrameIndex] = useState(0)
   const [running, setRunning] = useState(true)
-  const [seed, setSeed] = useState(() => createSeed())
-  const [randomizeSeed, setRandomizeSeed] = useState(true)
   const [stats, setStats] = useState<StatsSummary>({
     nodes: 0,
     attractors: 0,
@@ -81,22 +112,16 @@ export default function App() {
   })
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const paramsRef = useRef(params)
+  const framesRef = useRef(frames)
   const hydratingRef = useRef(true)
   const previewConfigRef = useRef<ConfigState | null>(null)
   const previewRunningRef = useRef<boolean>(running)
   const urlUpdateRef = useRef<number | null>(null)
-  const simulationRef = useRef<SimulationState>(
-    createSimulationState(
-      { width: 0, height: 0 },
-      params,
-      []
-    )
-  )
+  const simulationRef = useRef<SimulationState[]>([])
 
   useEffect(() => {
-    paramsRef.current = params
-  }, [params])
+    framesRef.current = frames
+  }, [frames])
 
   const boundsPx = useMemo(
     () => ({
@@ -106,71 +131,113 @@ export default function App() {
     [paper]
   )
 
-  const buildObstacles = useCallback(
-    (seedValue: number) => {
+  const gridLayout = useMemo(() => {
+    const rows = Math.max(1, Math.floor(templateGrid.rows))
+    const cols = Math.max(1, Math.floor(templateGrid.cols))
+    const cellWidth = Math.max(1, boundsPx.width / cols)
+    const cellHeight = Math.max(1, boundsPx.height / rows)
+    const gutterPx = unitsToPx(templateGrid.gutter, paper.unit, paper.dpi)
+    const cells = Array.from({ length: rows * cols }, (_, index) => {
+      const row = Math.floor(index / cols)
+      const col = index % cols
+      return {
+        index,
+        row,
+        col,
+        offset: { x: col * cellWidth, y: row * cellHeight },
+        bounds: { width: cellWidth, height: cellHeight }
+      }
+    })
+    return {
+      rows,
+      cols,
+      cellWidth,
+      cellHeight,
+      gutterPx,
+      cells
+    }
+  }, [boundsPx.height, boundsPx.width, paper.dpi, paper.unit, templateGrid.cols, templateGrid.gutter, templateGrid.rows])
+
+  const gutterPaddingPx = useMemo(() => Math.max(0, gridLayout.gutterPx * 0.5), [gridLayout.gutterPx])
+
+  const buildFrameObstacles = useCallback(
+    (frame: FrameConfig, layout: GridCellLayout, seedValue: number): Polygon[] => {
       const rng = createSeededRng(seedValue)
-      const minRadiusPx = unitsToPx(obstacleSettings.minRadius, paper.unit, paper.dpi)
-      const maxRadiusPx = unitsToPx(obstacleSettings.maxRadius, paper.unit, paper.dpi)
-      const marginPx = unitsToPx(obstacleSettings.margin, paper.unit, paper.dpi)
-      return generatePolygons(
-        boundsPx,
+      const minRadiusPx = unitsToPx(frame.obstacles.minRadius, paper.unit, paper.dpi)
+      const maxRadiusPx = unitsToPx(frame.obstacles.maxRadius, paper.unit, paper.dpi)
+      const marginPx = unitsToPx(frame.obstacles.margin, paper.unit, paper.dpi)
+      const polygons = generatePolygons(
+        layout.bounds,
         {
-          count: obstacleSettings.count,
-          minVertices: obstacleSettings.minVertices,
-          maxVertices: obstacleSettings.maxVertices,
+          count: frame.obstacles.count,
+          minVertices: frame.obstacles.minVertices,
+          maxVertices: frame.obstacles.maxVertices,
           minRadius: minRadiusPx,
           maxRadius: maxRadiusPx,
           margin: marginPx
         },
         rng
       )
-    },
-    [boundsPx, obstacleSettings, paper.dpi, paper.unit]
-  )
-
-  const regenerateObstacles = useCallback(
-    (shouldRandomize = false) => {
-      const nextSeed = shouldRandomize && randomizeSeed ? createSeed() : seed
-      if (shouldRandomize && randomizeSeed) {
-        setSeed(nextSeed)
+      if (!templateGrid.gutterAsObstacles || gutterPaddingPx <= 0) {
+        return polygons
       }
-      const polygons = buildObstacles(nextSeed)
-      setObstacles(polygons)
+      const edges = {
+        top: layout.row > 0,
+        bottom: layout.row < gridLayout.rows - 1,
+        left: layout.col > 0,
+        right: layout.col < gridLayout.cols - 1
+      }
+      return [...polygons, ...createGutterObstacles(layout.bounds, gutterPaddingPx, edges)]
     },
-    [buildObstacles, randomizeSeed, seed]
+    [gridLayout.cols, gridLayout.rows, gutterPaddingPx, paper.dpi, paper.unit, templateGrid.gutterAsObstacles]
   )
 
-  const resetSimulation = useCallback(
-    (seedValue: number) => {
+  const rebuildFrameSimulation = useCallback(
+    (index: number, frame: FrameConfig, seedOverride?: number) => {
+      const layout = gridLayout.cells[index]
+      if (!layout) return
+      const seedValue = seedOverride ?? frame.seed
+      const obstacles = buildFrameObstacles(frame, layout, seedValue)
       const rng = createSeededRng(seedValue + 1)
-      simulationRef.current = createSimulationState(boundsPx, paramsRef.current, obstacles, rng)
+      simulationRef.current[index] = createSimulationState(layout.bounds, frame.params, obstacles, rng)
     },
-    [boundsPx, obstacles]
+    [buildFrameObstacles, gridLayout.cells]
   )
 
-  const handleResetSimulation = useCallback(() => {
-    const nextSeed = randomizeSeed ? createSeed() : seed
-    if (randomizeSeed) {
-      setSeed(nextSeed)
-    }
-    resetSimulation(nextSeed)
-  }, [randomizeSeed, resetSimulation, seed])
-
-  const handleRegenerateObstacles = useCallback(() => {
-    regenerateObstacles(true)
-  }, [regenerateObstacles])
+  const rebuildAllSimulations = useCallback(
+    (nextFrames: FrameConfig[]) => {
+      simulationRef.current = nextFrames.map((frame, index) => {
+        const layout = gridLayout.cells[index]
+        if (!layout) {
+          return createSimulationState({ width: 0, height: 0 }, frame.params, [])
+        }
+        const obstacles = buildFrameObstacles(frame, layout, frame.seed)
+        const rng = createSeededRng(frame.seed + 1)
+        return createSimulationState(layout.bounds, frame.params, obstacles, rng)
+      })
+    },
+    [buildFrameObstacles, gridLayout.cells]
+  )
 
   useEffect(() => {
-    regenerateObstacles(false)
-  }, [regenerateObstacles, seed])
+    setFrames((prev) => {
+      const next = resizeFrames(prev, gridLayout.cells.length)
+      if (next !== prev) {
+        setActiveFrameIndex((index) => Math.min(index, next.length - 1))
+        rebuildAllSimulations(next)
+      }
+      return next
+    })
+  }, [gridLayout.cells.length, rebuildAllSimulations])
 
   useEffect(() => {
-    resetSimulation(seed)
-  }, [resetSimulation, obstacles, seed])
+    rebuildAllSimulations(frames)
+  }, [rebuildAllSimulations, gridLayout.cellHeight, gridLayout.cellWidth, gridLayout.rows, gridLayout.cols])
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      const state = simulationRef.current
+      const state = simulationRef.current[activeFrameIndex]
+      if (!state) return
       setStats({
         nodes: state.nodes.length,
         attractors: state.attractors.length,
@@ -189,15 +256,16 @@ export default function App() {
     const ctx = canvas.getContext('2d', { alpha: false })
     if (!ctx) return null
 
-    renderSimulation(ctx, simulationRef.current, {
+    renderComposite(ctx, simulationRef.current, {
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
       view: { pan: { x: 0, y: 0 }, zoom: 1 },
       mode: 'export',
-      settings: renderSettings
+      grid: gridLayout,
+      frames: framesRef.current
     })
     return canvas
-  }, [boundsPx.height, boundsPx.width, renderSettings])
+  }, [boundsPx.height, boundsPx.width, gridLayout])
 
   const handleExportPng = useCallback(() => {
     const canvas = exportCanvas()
@@ -209,29 +277,37 @@ export default function App() {
   }, [exportCanvas])
 
   const handleExportSvg = useCallback(() => {
-    const svg = exportSvg(simulationRef.current, paper.unit, paper.width, paper.height, renderSettings)
+    const svg = exportCompositeSvg({
+      states: simulationRef.current,
+      frames: framesRef.current,
+      grid: gridLayout,
+      unit: paper.unit,
+      widthInUnits: paper.width,
+      heightInUnits: paper.height
+    })
     const blob = new Blob([svg], { type: 'image/svg+xml' })
     downloadBlob(blob, `root-growth-${Date.now()}.svg`)
-  }, [paper.height, paper.unit, paper.width, renderSettings])
+  }, [gridLayout, paper.height, paper.unit, paper.width])
 
   const handleExportMp4 = useCallback(async () => {
     try {
-      const blob = await encodeSimulationMp4({
-        state: simulationRef.current,
-        params: paramsRef.current,
-        settings: renderSettings,
-        fps: exportSettings.fps,
-        durationSeconds: exportSettings.durationSeconds,
-        durationMode: exportSettings.durationMode,
-        stepsPerFrame: exportSettings.stepsPerFrame,
-        seed
+      const activeFrame = framesRef.current[activeFrameIndex]
+      if (!activeFrame) return
+      const blob = await encodeCompositeMp4({
+        frames: framesRef.current,
+        grid: gridLayout,
+        states: simulationRef.current,
+        fps: activeFrame.exportSettings.fps,
+        durationSeconds: activeFrame.exportSettings.durationSeconds,
+        durationMode: activeFrame.exportSettings.durationMode,
+        stepsPerFrame: activeFrame.exportSettings.stepsPerFrame
       })
       downloadBlob(blob, `root-growth-${Date.now()}.mp4`)
     } catch (error) {
       console.error(error)
       alert(error instanceof Error ? error.message : 'MP4 export failed.')
     }
-  }, [exportSettings, renderSettings])
+  }, [activeFrameIndex, gridLayout])
 
   const handleToggleRunning = useCallback(() => {
     setRunning((value) => !value)
@@ -241,14 +317,11 @@ export default function App() {
     () => ({
       schemaVersion: LATEST_SCHEMA_VERSION,
       paper,
-      params,
-      obstacles: obstacleSettings,
-      renderSettings,
-      exportSettings,
-      seed,
-      randomizeSeed
+      templateGrid,
+      frames,
+      activeFrameIndex
     }),
-    [paper, params, obstacleSettings, renderSettings, exportSettings, seed, randomizeSeed]
+    [paper, templateGrid, frames, activeFrameIndex]
   )
 
   const { savedEntries, saveManualEntry, deleteEntry, getEntryConfig, currentConfig } = useSavedConfigs(
@@ -257,28 +330,26 @@ export default function App() {
   )
 
   const normalizeConfig = useCallback((config: ConfigState): ConfigState => {
+    const normalizedGrid = normalizeGrid(config.templateGrid)
+    const nextFrames = normalizeFrames(config.frames, normalizedGrid.rows * normalizedGrid.cols)
+    const activeIndex = clampIndex(config.activeFrameIndex, nextFrames.length)
     return {
       schemaVersion: LATEST_SCHEMA_VERSION,
       paper: { ...DEFAULT_PAPER, ...config.paper },
-      params: { ...DEFAULT_PARAMS, ...config.params },
-      obstacles: { ...DEFAULT_OBSTACLES, ...config.obstacles },
-      renderSettings: { ...DEFAULT_RENDER, ...config.renderSettings },
-      exportSettings: { ...DEFAULT_EXPORT, ...config.exportSettings },
-      seed: Number.isFinite(config.seed) ? config.seed : createSeed(),
-      randomizeSeed: typeof config.randomizeSeed === 'boolean' ? config.randomizeSeed : true
+      templateGrid: normalizedGrid,
+      frames: nextFrames,
+      activeFrameIndex: activeIndex
     }
   }, [])
 
   const applyConfig = useCallback((config: ConfigState) => {
     const normalized = normalizeConfig(config)
     setPaper(normalized.paper)
-    setParams(normalized.params)
-    setObstacleSettings(normalized.obstacles)
-    setRenderSettings(normalized.renderSettings)
-    setExportSettings(normalized.exportSettings)
-    setSeed(normalized.seed)
-    setRandomizeSeed(normalized.randomizeSeed)
-  }, [normalizeConfig])
+    setTemplateGrid(normalized.templateGrid)
+    setFrames(normalized.frames)
+    setActiveFrameIndex(normalized.activeFrameIndex)
+    rebuildAllSimulations(normalized.frames)
+  }, [normalizeConfig, rebuildAllSimulations])
 
   useEffect(() => {
     if (!hydratingRef.current) return
@@ -347,37 +418,93 @@ export default function App() {
     [applyConfig, getEntryConfig, normalizeConfig]
   )
 
+  const activeFrame = frames[activeFrameIndex] ?? frames[0]
+
+  const updateActiveFrame = useCallback(
+    (updater: (frame: FrameConfig) => FrameConfig, options?: { rebuildSimulation?: boolean; seedOverride?: number }) => {
+      if (!activeFrame) return
+      const updated = updater(activeFrame)
+      setFrames((prev) => {
+        const next = [...prev]
+        next[activeFrameIndex] = updated
+        return next
+      })
+      if (options?.rebuildSimulation) {
+        rebuildFrameSimulation(activeFrameIndex, updated, options.seedOverride)
+      }
+    },
+    [activeFrame, activeFrameIndex, rebuildFrameSimulation]
+  )
+
+  const handleResetSimulation = useCallback(() => {
+    if (!activeFrame) return
+    const nextSeed = activeFrame.randomizeSeed ? createSeed() : activeFrame.seed
+    updateActiveFrame(
+      (frame) => ({
+        ...frame,
+        seed: nextSeed
+      }),
+      { rebuildSimulation: true, seedOverride: nextSeed }
+    )
+  }, [activeFrame, updateActiveFrame])
+
+  const handleRegenerateObstacles = useCallback(() => {
+    if (!activeFrame) return
+    const nextSeed = activeFrame.randomizeSeed ? createSeed() : activeFrame.seed
+    updateActiveFrame(
+      (frame) => ({
+        ...frame,
+        seed: nextSeed
+      }),
+      { rebuildSimulation: true, seedOverride: nextSeed }
+    )
+  }, [activeFrame, updateActiveFrame])
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-950">
       <aside className="h-screen w-[360px] border-r border-zinc-800 bg-zinc-950">
         <ScrollArea className="h-full">
           <ControlsPanel
             paper={paper}
-            params={params}
-            obstacles={obstacleSettings}
-            renderSettings={renderSettings}
-            exportSettings={exportSettings}
-            seed={seed}
-            randomizeSeed={randomizeSeed}
+            templateGrid={templateGrid}
+            frames={frames}
+            activeFrameIndex={activeFrameIndex}
+            params={activeFrame?.params ?? DEFAULT_PARAMS}
+            obstacles={activeFrame?.obstacles ?? DEFAULT_OBSTACLES}
+            renderSettings={activeFrame?.renderSettings ?? DEFAULT_RENDER}
+            exportSettings={activeFrame?.exportSettings ?? DEFAULT_EXPORT}
+            seed={activeFrame?.seed ?? 0}
+            randomizeSeed={activeFrame?.randomizeSeed ?? true}
             savedEntries={savedEntries}
             stats={stats}
             running={running}
             onPaperChange={setPaper}
+            onTemplateGridChange={setTemplateGrid}
+            onActiveFrameChange={setActiveFrameIndex}
             onParamsChange={(next) => {
-              paramsRef.current = next
-              setParams(next)
+              updateActiveFrame((frame) => ({ ...frame, params: next }))
             }}
-            onObstacleChange={setObstacleSettings}
-            onRenderSettingsChange={setRenderSettings}
-            onExportSettingsChange={setExportSettings}
+            onObstacleChange={(next) => {
+              updateActiveFrame((frame) => ({ ...frame, obstacles: next }), { rebuildSimulation: true })
+            }}
+            onRenderSettingsChange={(next) => {
+              updateActiveFrame((frame) => ({ ...frame, renderSettings: next }))
+            }}
+            onExportSettingsChange={(next) => {
+              updateActiveFrame((frame) => ({ ...frame, exportSettings: next }))
+            }}
             onToggleRunning={handleToggleRunning}
             onResetSimulation={handleResetSimulation}
             onRegenerateObstacles={handleRegenerateObstacles}
             onExportPng={handleExportPng}
             onExportSvg={handleExportSvg}
             onExportMp4={handleExportMp4}
-            onSeedChange={setSeed}
-            onRandomizeSeedChange={setRandomizeSeed}
+            onSeedChange={(next) => {
+              updateActiveFrame((frame) => ({ ...frame, seed: next }), { rebuildSimulation: true, seedOverride: next })
+            }}
+            onRandomizeSeedChange={(next) => {
+              updateActiveFrame((frame) => ({ ...frame, randomizeSeed: next }))
+            }}
             onSaveEntry={saveManualEntry}
             onLoadEntry={handleLoadEntry}
             onDeleteEntry={deleteEntry}
@@ -388,11 +515,12 @@ export default function App() {
       </aside>
       <main className="relative flex-1 bg-zinc-950">
         <CanvasView
-          key={`${boundsPx.width}-${boundsPx.height}`}
+          key={`${boundsPx.width}-${boundsPx.height}-${gridLayout.rows}-${gridLayout.cols}`}
           simulationRef={simulationRef}
-          paramsRef={paramsRef}
+          framesRef={framesRef}
+          gridLayout={gridLayout}
+          templateGrid={templateGrid}
           running={running}
-          renderSettings={renderSettings}
           canvasRef={canvasRef}
         />
       </main>
@@ -407,4 +535,98 @@ function downloadBlob(blob: Blob, filename: string) {
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function normalizeGrid(grid: TemplateGridSettings): TemplateGridSettings {
+  return {
+    rows: Math.max(1, Math.floor(grid?.rows ?? DEFAULT_TEMPLATE_GRID.rows)),
+    cols: Math.max(1, Math.floor(grid?.cols ?? DEFAULT_TEMPLATE_GRID.cols)),
+    gutter: Number.isFinite(grid?.gutter) ? grid.gutter : DEFAULT_TEMPLATE_GRID.gutter,
+    showGutter: typeof grid?.showGutter === 'boolean' ? grid.showGutter : DEFAULT_TEMPLATE_GRID.showGutter,
+    gutterAsObstacles:
+      typeof grid?.gutterAsObstacles === 'boolean' ? grid.gutterAsObstacles : DEFAULT_TEMPLATE_GRID.gutterAsObstacles
+  }
+}
+
+function normalizeFrames(frames: FrameConfig[], targetLength: number): FrameConfig[] {
+  const safeFrames = Array.isArray(frames) ? frames : []
+  const normalized = safeFrames.map((frame) => ({
+    params: { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) },
+    obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
+    renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
+    exportSettings: { ...DEFAULT_EXPORT, ...(frame?.exportSettings ?? {}) },
+    seed: Number.isFinite(frame?.seed) ? frame.seed : createSeed(),
+    randomizeSeed: typeof frame?.randomizeSeed === 'boolean' ? frame.randomizeSeed : true
+  }))
+  if (normalized.length >= targetLength) {
+    return normalized.slice(0, Math.max(1, targetLength))
+  }
+  const next = [...normalized]
+  while (next.length < Math.max(1, targetLength)) {
+    next.push(createDefaultFrame())
+  }
+  return next
+}
+
+function resizeFrames(frames: FrameConfig[], targetLength: number): FrameConfig[] {
+  if (!Number.isFinite(targetLength) || targetLength < 1) return frames
+  if (frames.length === targetLength) return frames
+  if (frames.length > targetLength) {
+    return frames.slice(0, targetLength)
+  }
+  const next = [...frames]
+  while (next.length < targetLength) {
+    next.push(createDefaultFrame())
+  }
+  return next
+}
+
+function clampIndex(index: number, length: number): number {
+  if (!Number.isFinite(index)) return 0
+  return Math.min(Math.max(0, Math.floor(index)), Math.max(0, length - 1))
+}
+
+function createGutterObstacles(
+  bounds: Bounds,
+  padding: number,
+  edges: { top: boolean; bottom: boolean; left: boolean; right: boolean }
+): Polygon[] {
+  const inset = Math.min(Math.max(0, padding), bounds.width / 2, bounds.height / 2)
+  if (inset <= 0) return []
+  const w = bounds.width
+  const h = bounds.height
+  const polygons: Polygon[] = []
+  if (edges.top) {
+    polygons.push([
+      { x: 0, y: 0 },
+      { x: w, y: 0 },
+      { x: w, y: inset },
+      { x: 0, y: inset }
+    ])
+  }
+  if (edges.bottom) {
+    polygons.push([
+      { x: 0, y: h - inset },
+      { x: w, y: h - inset },
+      { x: w, y: h },
+      { x: 0, y: h }
+    ])
+  }
+  if (edges.left) {
+    polygons.push([
+      { x: 0, y: inset },
+      { x: inset, y: inset },
+      { x: inset, y: h - inset },
+      { x: 0, y: h - inset }
+    ])
+  }
+  if (edges.right) {
+    polygons.push([
+      { x: w - inset, y: inset },
+      { x: w, y: inset },
+      { x: w, y: h - inset },
+      { x: w - inset, y: h - inset }
+    ])
+  }
+  return polygons
 }
