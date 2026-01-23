@@ -205,6 +205,57 @@ export default function ControlsPanel({
                 onValueChange={(next) => onParamsChange({ ...params, seedSpread: next })}
               />
             </div>
+            <div className="space-y-1">
+              <Label>Seed placement</Label>
+              <Select
+                value={params.seedPlacement}
+                onValueChange={(value) =>
+                  onParamsChange({ ...params, seedPlacement: value as SimulationParams['seedPlacement'] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="edge">Edge line</SelectItem>
+                  <SelectItem value="scatter">Scatter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {params.seedPlacement === 'edge' ? (
+              <>
+                <div className="space-y-1">
+                  <Label>Seed edge</Label>
+                  <Select
+                    value={params.seedEdge}
+                    onValueChange={(value) =>
+                      onParamsChange({ ...params, seedEdge: value as SimulationParams['seedEdge'] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">Top</SelectItem>
+                      <SelectItem value="bottom">Bottom</SelectItem>
+                      <SelectItem value="left">Left</SelectItem>
+                      <SelectItem value="right">Right</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Seed angle (deg)</Label>
+                  <ScrubbableNumberInput
+                    min={-180}
+                    max={180}
+                    step={1}
+                    integer
+                    value={params.seedAngle}
+                    onValueChange={(next) => onParamsChange({ ...params, seedAngle: next })}
+                  />
+                </div>
+              </>
+            ) : null}
               </div>
               <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
                 <div>

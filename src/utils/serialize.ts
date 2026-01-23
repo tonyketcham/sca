@@ -33,6 +33,9 @@ function toCompact(config: ConfigState): CompactConfig {
       config.params.maxNodes,
       config.params.seedCount,
       config.params.seedSpread,
+      config.params.seedPlacement === 'scatter' ? 1 : 0,
+      config.params.seedEdge === 'bottom' ? 1 : config.params.seedEdge === 'left' ? 2 : config.params.seedEdge === 'right' ? 3 : 0,
+      config.params.seedAngle,
       config.params.attractorCount,
       config.params.stepsPerFrame,
       config.params.avoidObstacles ? 1 : 0
@@ -78,6 +81,44 @@ function fromCompact(input: unknown): ConfigState | null {
 
   if (!paper || !params || !obstacles || !render || !exportSettings) return null
 
+  const parsedParams: ConfigState['params'] =
+    version >= 2
+      ? {
+          influenceRadius: Number(params[0]),
+          killRadius: Number(params[1]),
+          stepSize: Number(params[2]),
+          maxNodes: Number(params[3]),
+          seedCount: Number(params[4]),
+          seedSpread: Number(params[5]),
+          seedPlacement: Number(params[6]) === 1 ? 'scatter' : 'edge',
+          seedEdge:
+            Number(params[7]) === 1
+              ? 'bottom'
+              : Number(params[7]) === 2
+              ? 'left'
+              : Number(params[7]) === 3
+              ? 'right'
+              : 'top',
+          seedAngle: Number(params[8]),
+          attractorCount: Number(params[9]),
+          stepsPerFrame: Number(params[10]),
+          avoidObstacles: Number(params[11]) === 1
+        }
+      : {
+          influenceRadius: Number(params[0]),
+          killRadius: Number(params[1]),
+          stepSize: Number(params[2]),
+          maxNodes: Number(params[3]),
+          seedCount: Number(params[4]),
+          seedSpread: Number(params[5]),
+          seedPlacement: 'edge',
+          seedEdge: 'top',
+          seedAngle: 0,
+          attractorCount: Number(params[6]),
+          stepsPerFrame: Number(params[7]),
+          avoidObstacles: Number(params[8]) === 1
+        }
+
   return {
     schemaVersion: version,
     paper: {
@@ -86,17 +127,7 @@ function fromCompact(input: unknown): ConfigState | null {
       unit: Number(paper[2]) === 0 ? 'in' : 'cm',
       dpi: Number(paper[3])
     },
-    params: {
-      influenceRadius: Number(params[0]),
-      killRadius: Number(params[1]),
-      stepSize: Number(params[2]),
-      maxNodes: Number(params[3]),
-      seedCount: Number(params[4]),
-      seedSpread: Number(params[5]),
-      attractorCount: Number(params[6]),
-      stepsPerFrame: Number(params[7]),
-      avoidObstacles: Number(params[8]) === 1
-    },
+    params: parsedParams,
     obstacles: {
       count: Number(obstacles[0]),
       minVertices: Number(obstacles[1]),

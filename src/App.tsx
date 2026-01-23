@@ -12,6 +12,7 @@ import type { ConfigState, ExportSettings, ObstacleSettings, PaperSettings, Stat
 import { useSavedConfigs } from './hooks/useSavedConfigs'
 import { decodeConfig, encodeConfig } from './utils/serialize'
 import { createSeed, createSeededRng } from './utils/rng'
+import { LATEST_SCHEMA_VERSION } from './utils/schemaMigrations'
 
 const DEFAULT_PAPER: PaperSettings = {
   width: 8.5,
@@ -27,6 +28,9 @@ const DEFAULT_PARAMS: SimulationParams = {
   maxNodes: 4000,
   seedCount: 3,
   seedSpread: 30,
+  seedPlacement: 'edge',
+  seedEdge: 'top',
+  seedAngle: 0,
   attractorCount: 900,
   stepsPerFrame: 3,
   avoidObstacles: true
@@ -235,7 +239,7 @@ export default function App() {
 
   const configState = useMemo<ConfigState>(
     () => ({
-      schemaVersion: 1,
+      schemaVersion: LATEST_SCHEMA_VERSION,
       paper,
       params,
       obstacles: obstacleSettings,
@@ -254,7 +258,7 @@ export default function App() {
 
   const normalizeConfig = useCallback((config: ConfigState): ConfigState => {
     return {
-      schemaVersion: 1,
+      schemaVersion: LATEST_SCHEMA_VERSION,
       paper: { ...DEFAULT_PAPER, ...config.paper },
       params: { ...DEFAULT_PARAMS, ...config.params },
       obstacles: { ...DEFAULT_OBSTACLES, ...config.obstacles },
