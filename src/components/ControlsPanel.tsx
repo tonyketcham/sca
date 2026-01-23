@@ -350,6 +350,7 @@ export default function ControlsPanel({
                 <SelectContent>
                   <SelectItem value="in">Inches</SelectItem>
                   <SelectItem value="cm">Centimeters</SelectItem>
+                  <SelectItem value="mm">Millimeters</SelectItem>
                 </SelectContent>
               </Select>
             </div>

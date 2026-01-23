@@ -1,6 +1,6 @@
 import type { ConfigState } from '../types/ui'
 
-export const LATEST_SCHEMA_VERSION = 2
+export const LATEST_SCHEMA_VERSION = 3
 
 type Migration = (input: ConfigState) => ConfigState
 
@@ -14,6 +14,14 @@ const migrations: Record<number, Migration> = {
       seedPlacement: isSeedPlacement(input.params.seedPlacement) ? input.params.seedPlacement : 'edge',
       seedEdge: isSeedEdge(input.params.seedEdge) ? input.params.seedEdge : 'top',
       seedAngle: Number.isFinite(input.params.seedAngle) ? input.params.seedAngle : 0
+    }
+  }),
+  3: (input) => ({
+    ...input,
+    schemaVersion: 3,
+    paper: {
+      ...input.paper,
+      unit: isUnit(input.paper.unit) ? input.paper.unit : 'in'
     }
   })
 }
@@ -46,4 +54,8 @@ function isSeedPlacement(value: unknown): value is ConfigState['params']['seedPl
 
 function isSeedEdge(value: unknown): value is ConfigState['params']['seedEdge'] {
   return value === 'top' || value === 'bottom' || value === 'left' || value === 'right'
+}
+
+function isUnit(value: unknown): value is ConfigState['paper']['unit'] {
+  return value === 'in' || value === 'cm' || value === 'mm'
 }

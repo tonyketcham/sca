@@ -1,6 +1,6 @@
 import type { SimulationState } from '../engine/simulationState'
 import type { RenderSettings } from '../render/canvasRenderer'
-import type { Unit } from '../geometry/units'
+import { UNIT_LABELS, type Unit } from '../geometry/units'
 
 export function exportSvg(
   state: SimulationState,
@@ -11,7 +11,7 @@ export function exportSvg(
 ): string {
   const widthPx = state.bounds.width
   const heightPx = state.bounds.height
-  const unitLabel = unit === 'in' ? 'in' : 'cm'
+  const unitLabel = UNIT_LABELS[unit]
 
   const lines = state.nodes
     .map((node) => {

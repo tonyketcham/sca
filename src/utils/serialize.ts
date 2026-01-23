@@ -25,7 +25,7 @@ export function decodeConfig(encoded: string): ConfigState | null {
 function toCompact(config: ConfigState): CompactConfig {
   return [
     LATEST_SCHEMA_VERSION,
-    [config.paper.width, config.paper.height, config.paper.unit === 'in' ? 0 : 1, config.paper.dpi],
+    [config.paper.width, config.paper.height, unitToCompact(config.paper.unit), config.paper.dpi],
     [
       config.params.influenceRadius,
       config.params.killRadius,
@@ -124,7 +124,7 @@ function fromCompact(input: unknown): ConfigState | null {
     paper: {
       width: Number(paper[0]),
       height: Number(paper[1]),
-      unit: Number(paper[2]) === 0 ? 'in' : 'cm',
+      unit: compactToUnit(paper[2]),
       dpi: Number(paper[3])
     },
     params: parsedParams,
@@ -155,6 +155,27 @@ function fromCompact(input: unknown): ConfigState | null {
     seed: Number(input[6]),
     randomizeSeed: Number(input[7]) === 1
   }
+}
+
+function unitToCompact(unit: ConfigState['paper']['unit']): number {
+  switch (unit) {
+    case 'in':
+      return 0
+    case 'cm':
+      return 1
+    case 'mm':
+      return 2
+    default:
+      return 0
+  }
+}
+
+function compactToUnit(value: unknown): ConfigState['paper']['unit'] {
+  const unit = Number(value)
+  if (unit === 0) return 'in'
+  if (unit === 1) return 'cm'
+  if (unit === 2) return 'mm'
+  return 'in'
 }
 
 function lzwCompress(input: string): Uint16Array {
