@@ -588,6 +588,22 @@ export default function App() {
     });
   }, [normalizeSelection]);
 
+  const selectFrameRange = useCallback(
+    (startIndex: number, endIndex: number) => {
+      if (!Number.isFinite(startIndex) || !Number.isFinite(endIndex)) return;
+      const start = Math.min(Math.floor(startIndex), Math.floor(endIndex));
+      const end = Math.max(Math.floor(startIndex), Math.floor(endIndex));
+      const next: number[] = [];
+      for (let i = start; i <= end; i += 1) {
+        next.push(i);
+      }
+      setSelectedFrameIndices(() =>
+        normalizeSelection(next, framesRef.current.length),
+      );
+    },
+    [normalizeSelection],
+  );
+
   const clearSelection = useCallback(() => {
     setSelectedFrameIndices([]);
   }, []);
@@ -621,6 +637,7 @@ export default function App() {
           onSelectProject={selectProject}
           onSelectFrame={selectSingleFrame}
           onToggleFrame={toggleFrameSelection}
+          onSelectFrameRange={selectFrameRange}
           onReorderFrames={handleReorderFrames}
           onUpdateSelectedFrames={updateSelectedFrames}
           onToggleRunning={handleToggleRunning}

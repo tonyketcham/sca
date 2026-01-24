@@ -13,6 +13,7 @@ type LayersPanelProps = {
   onSelectProject: () => void
   onSelectFrame: (index: number) => void
   onToggleFrame: (index: number) => void
+  onSelectFrameRange: (startIndex: number, endIndex: number) => void
   onReorderFrames: (startIndex: number, endIndex: number) => void
 }
 
@@ -28,10 +29,23 @@ export default function LayersPanel({
   onSelectProject,
   onSelectFrame,
   onToggleFrame,
+  onSelectFrameRange,
   onReorderFrames
 }: LayersPanelProps) {
   const isProjectSelected = selectedFrameIndices.length === 0
   const columnCount = Math.max(1, templateGrid.cols)
+  const [anchorIndex, setAnchorIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (selectedFrameIndices.length === 0) {
+      setAnchorIndex(null)
+    }
+  }, [selectedFrameIndices.length])
+
+  const handleSelectProject = () => {
+    setAnchorIndex(null)
+    onSelectProject()
+  }
 
   return (
     <section className="space-y-2 border-b border-zinc-800 px-4 py-3">
@@ -47,7 +61,7 @@ export default function LayersPanel({
           <div className="space-y-1 p-1">
             <button
               type="button"
-              onClick={onSelectProject}
+              onClick={handleSelectProject}
               className={cn(
                 'flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-left text-[11px] transition',
                 isProjectSelected
@@ -64,8 +78,11 @@ export default function LayersPanel({
                 index={index}
                 columnCount={columnCount}
                 isSelected={selectedFrameIndices.includes(index)}
+                anchorIndex={anchorIndex}
                 onSelectFrame={onSelectFrame}
                 onToggleFrame={onToggleFrame}
+                onSelectFrameRange={onSelectFrameRange}
+                onUpdateAnchor={setAnchorIndex}
                 onReorderFrames={onReorderFrames}
               />
             ))}
@@ -80,8 +97,11 @@ type FrameLayerRowProps = {
   index: number
   columnCount: number
   isSelected: boolean
+  anchorIndex: number | null
   onSelectFrame: (index: number) => void
   onToggleFrame: (index: number) => void
+  onSelectFrameRange: (startIndex: number, endIndex: number) => void
+  onUpdateAnchor: (index: number) => void
   onReorderFrames: (startIndex: number, endIndex: number) => void
 }
 
@@ -89,8 +109,11 @@ function FrameLayerRow({
   index,
   columnCount,
   isSelected,
+  anchorIndex,
   onSelectFrame,
   onToggleFrame,
+  onSelectFrameRange,
+  onUpdateAnchor,
   onReorderFrames
 }: FrameLayerRowProps) {
   const rowRef = useRef<HTMLDivElement | null>(null)
@@ -131,11 +154,20 @@ function FrameLayerRow({
   }, [columnCount, index])
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.shiftKey) {
+      onSelectFrameRange(anchorIndex ?? index, index)
+      onUpdateAnchor(index)
+      return
+    }
+
     if (event.metaKey || event.ctrlKey) {
       onToggleFrame(index)
-    } else {
-      onSelectFrame(index)
+      onUpdateAnchor(index)
+      return
     }
+
+    onSelectFrame(index)
+    onUpdateAnchor(index)
   }
 
   return (
