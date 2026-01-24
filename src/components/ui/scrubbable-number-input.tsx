@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Input } from './input'
 
 type ScrubbableNumberInputProps = {
-  value: number
+  value: number | null
   onValueChange: (value: number) => void
   min?: number
   max?: number
@@ -10,6 +10,7 @@ type ScrubbableNumberInputProps = {
   integer?: boolean
   className?: string
   disabled?: boolean
+  placeholder?: string
 }
 
 const PX_PER_STEP = 4
@@ -22,7 +23,8 @@ export function ScrubbableNumberInput({
   step = 1,
   integer = false,
   className,
-  disabled = false
+  disabled = false,
+  placeholder
 }: ScrubbableNumberInputProps) {
   const startRef = useRef<{ x: number; value: number } | null>(null)
   const pointerIdRef = useRef<number | null>(null)
@@ -60,7 +62,7 @@ export function ScrubbableNumberInput({
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLInputElement>) => {
-    if (disabled) return
+    if (disabled || value === null) return
     if (event.button !== 0) return
     startRef.current = { x: event.clientX, value }
     pointerIdRef.current = event.pointerId
@@ -69,7 +71,7 @@ export function ScrubbableNumberInput({
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLInputElement>) => {
-    if (disabled) return
+    if (disabled || value === null) return
     if (!startRef.current || pointerIdRef.current !== event.pointerId) return
     const delta = event.clientX - startRef.current.x
     const multiplier = getMultiplier(event.nativeEvent)
@@ -97,7 +99,8 @@ export function ScrubbableNumberInput({
   return (
     <Input
       type="number"
-      value={value}
+      value={value ?? ''}
+      placeholder={placeholder}
       onChange={handleChange}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

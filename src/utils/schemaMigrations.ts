@@ -2,7 +2,7 @@ import type { ConfigState, ExportSettings, FrameConfig, ObstacleSettings, Templa
 import type { SimulationParams } from '../engine/simulationState'
 import type { RenderSettings } from '../render/canvasRenderer'
 
-export const LATEST_SCHEMA_VERSION = 4
+export const LATEST_SCHEMA_VERSION = 5
 
 type Migration = (input: any) => any
 
@@ -32,7 +32,23 @@ const migrations: Record<number, Migration> = {
     templateGrid: normalizeTemplateGrid(input.templateGrid),
     frames: normalizeFrames(input),
     activeFrameIndex: Number.isFinite(input.activeFrameIndex) ? Math.max(0, Math.floor(input.activeFrameIndex)) : 0
-  })
+  }),
+  5: (input) => {
+    const frames = normalizeFrames(input)
+    const legacyIndex = Number.isFinite(input.activeFrameIndex)
+      ? Math.max(0, Math.floor(input.activeFrameIndex))
+      : 0
+    const selectionSource = Array.isArray(input.selectedFrameIndices)
+      ? input.selectedFrameIndices
+      : [legacyIndex]
+    return {
+      schemaVersion: 5,
+      paper: { ...input.paper },
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(selectionSource, frames.length)
+    }
+  }
 }
 
 export function migrateConfig(input: ConfigState): ConfigState | null {
@@ -101,6 +117,21 @@ function normalizeFrames(input: any): FrameConfig[] {
       randomizeSeed: legacy.randomizeSeed
     })
   ]
+}
+
+function normalizeSelection(input: unknown, length: number): number[] {
+  if (!Array.isArray(input) || length < 1) return []
+  const next: number[] = []
+  const seen = new Set<number>()
+  for (const raw of input) {
+    if (!Number.isFinite(raw)) continue
+    const index = Math.floor(Number(raw))
+    if (index < 0 || index >= length) continue
+    if (seen.has(index)) continue
+    seen.add(index)
+    next.push(index)
+  }
+  return next
 }
 
 function normalizeFrame(frame: Partial<FrameConfig> & {

@@ -34,7 +34,7 @@ function toCompact(config: ConfigState): CompactConfig {
       config.templateGrid.gutterAsObstacles ? 1 : 0
     ],
     config.frames.map((frame) => frameToCompact(frame)),
-    config.activeFrameIndex
+    config.selectedFrameIndices
   ]
 }
 
@@ -44,6 +44,34 @@ function fromCompact(input: unknown): ConfigState | null {
   if (!Number.isFinite(version)) return null
   const paper = input[1] as CompactConfig
   if (!paper) return null
+
+  if (version >= 5) {
+    const grid = input[2] as CompactConfig
+    const frames = input[3] as CompactConfig
+    const selected = input[4] as CompactConfig
+    if (!grid || !Array.isArray(frames) || !Array.isArray(selected)) return null
+    const parsedFrames = frames
+      .map((item) => (Array.isArray(item) ? frameFromCompact(item as CompactConfig) : null))
+      .filter(Boolean) as FrameConfig[]
+    return {
+      schemaVersion: version,
+      paper: {
+        width: Number(paper[0]),
+        height: Number(paper[1]),
+        unit: compactToUnit(paper[2]),
+        dpi: Number(paper[3])
+      },
+      templateGrid: {
+        rows: Number(grid[0]),
+        cols: Number(grid[1]),
+        gutter: Number(grid[2]),
+        showGutter: Number(grid[3]) === 1,
+        gutterAsObstacles: Number(grid[4]) === 1
+      },
+      frames: parsedFrames,
+      selectedFrameIndices: selected.map((value) => Number(value))
+    }
+  }
 
   if (version >= 4) {
     const grid = input[2] as CompactConfig
@@ -68,7 +96,7 @@ function fromCompact(input: unknown): ConfigState | null {
         gutterAsObstacles: Number(grid[4]) === 1
       },
       frames: parsedFrames,
-      activeFrameIndex: Number(input[4])
+      selectedFrameIndices: [Number(input[4])]
     }
   }
 

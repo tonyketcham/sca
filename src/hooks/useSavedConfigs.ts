@@ -26,7 +26,8 @@ export function useSavedConfigs(config: ConfigState, options: UseSavedConfigsOpt
     (name?: string) => {
       const payload = encodeConfig(config)
       const timestamp = Date.now()
-      const activeFrame = config.frames[config.activeFrameIndex] ?? config.frames[0]
+      const primaryIndex = config.selectedFrameIndices[0] ?? 0
+      const activeFrame = config.frames[primaryIndex] ?? config.frames[0]
       const entry: SavedEntry = {
         id: `save_${timestamp}_${Math.floor(Math.random() * 1000)}`,
         name: name && name.trim().length > 0 ? name.trim() : `Saved ${new Date(timestamp).toLocaleString()}`,

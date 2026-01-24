@@ -9,6 +9,10 @@ type CanvasViewProps = {
   framesRef: RefObject<FrameConfig[]>
   gridLayout: GridLayout
   templateGrid: TemplateGridSettings
+  selectedFrameIndices: number[]
+  onSelectFrame: (index: number) => void
+  onToggleFrame: (index: number) => void
+  onClearSelection: () => void
   running: boolean
   canvasRef: RefObject<HTMLCanvasElement | null>
 }
@@ -21,6 +25,10 @@ export default function CanvasView({
   framesRef,
   gridLayout,
   templateGrid,
+  selectedFrameIndices,
+  onSelectFrame,
+  onToggleFrame,
+  onClearSelection,
   running,
   canvasRef
 }: CanvasViewProps) {
@@ -31,6 +39,8 @@ export default function CanvasView({
   })
   const isDraggingRef = useRef(false)
   const lastPointerRef = useRef<Vec2>({ x: 0, y: 0 })
+  const pointerDownRef = useRef<{ x: number; y: number; frameIndex: number | null } | null>(null)
+  const hoveredFrameRef = useRef<number | null>(null)
   const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -54,19 +64,74 @@ export default function CanvasView({
     const canvas = canvasRef.current
     if (!canvas) return
 
+    const updateHover = (event: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      const point = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      }
+      hoveredFrameRef.current = getFrameIndexAtPoint(point, canvas, gridLayout, viewRef.current)
+    }
+
     const onPointerDown = (event: PointerEvent) => {
-      isDraggingRef.current = true
+      if (event.button !== 0) return
+      const rect = canvas.getBoundingClientRect()
+      const point = {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      }
+      pointerDownRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        frameIndex: getFrameIndexAtPoint(point, canvas, gridLayout, viewRef.current)
+      }
+      isDraggingRef.current = false
       lastPointerRef.current = { x: event.clientX, y: event.clientY }
       canvas.setPointerCapture(event.pointerId)
     }
 
     const onPointerUp = (event: PointerEvent) => {
+      if (pointerDownRef.current && !isDraggingRef.current) {
+        const { frameIndex } = pointerDownRef.current
+        if (typeof frameIndex === 'number') {
+          if (event.metaKey || event.ctrlKey) {
+            onToggleFrame(frameIndex)
+          } else {
+            onSelectFrame(frameIndex)
+          }
+        } else {
+          onClearSelection()
+        }
+      }
+      pointerDownRef.current = null
       isDraggingRef.current = false
-      canvas.releasePointerCapture(event.pointerId)
+      if (canvas.hasPointerCapture(event.pointerId)) {
+        canvas.releasePointerCapture(event.pointerId)
+      }
+    }
+
+    const onPointerLeave = (event: PointerEvent) => {
+      hoveredFrameRef.current = null
+      onPointerUp(event)
     }
 
     const onPointerMove = (event: PointerEvent) => {
-      if (!isDraggingRef.current) return
+      if (!pointerDownRef.current) {
+        updateHover(event)
+        return
+      }
+
+      if (!isDraggingRef.current) {
+        const distance = Math.hypot(
+          event.clientX - pointerDownRef.current.x,
+          event.clientY - pointerDownRef.current.y
+        )
+        if (distance < 3) {
+          return
+        }
+        isDraggingRef.current = true
+      }
+
       const deltaX = event.clientX - lastPointerRef.current.x
       const deltaY = event.clientY - lastPointerRef.current.y
       lastPointerRef.current = { x: event.clientX, y: event.clientY }
@@ -126,18 +191,18 @@ export default function CanvasView({
 
     canvas.addEventListener('pointerdown', onPointerDown)
     canvas.addEventListener('pointerup', onPointerUp)
-    canvas.addEventListener('pointerleave', onPointerUp)
+    canvas.addEventListener('pointerleave', onPointerLeave)
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('wheel', onWheel, { passive: false })
 
     return () => {
       canvas.removeEventListener('pointerdown', onPointerDown)
       canvas.removeEventListener('pointerup', onPointerUp)
-      canvas.removeEventListener('pointerleave', onPointerUp)
+      canvas.removeEventListener('pointerleave', onPointerLeave)
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('wheel', onWheel)
     }
-  }, [canvasRef, simulationRef])
+  }, [canvasRef, gridLayout, onClearSelection, onSelectFrame, onToggleFrame, simulationRef])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -169,7 +234,9 @@ export default function CanvasView({
         mode: 'editor',
         grid: gridLayout,
         frames,
-        templateGrid
+        templateGrid,
+        hoveredFrameIndex: hoveredFrameRef.current,
+        selectedFrameIndices
       })
 
       frameRef.current = requestAnimationFrame(animate)
@@ -182,7 +249,7 @@ export default function CanvasView({
         cancelAnimationFrame(frameRef.current)
       }
     }
-  }, [canvasRef, framesRef, gridLayout, running, simulationRef, templateGrid])
+  }, [canvasRef, framesRef, gridLayout, running, selectedFrameIndices, simulationRef, templateGrid])
 
   const viewHints = useMemo(
     () => (
@@ -204,4 +271,26 @@ export default function CanvasView({
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
+}
+
+function getFrameIndexAtPoint(
+  point: Vec2,
+  canvas: HTMLCanvasElement,
+  gridLayout: GridLayout,
+  view: ViewTransform
+): number | null {
+  const bounds = {
+    width: gridLayout.cellWidth * gridLayout.cols,
+    height: gridLayout.cellHeight * gridLayout.rows
+  }
+  const origin = getArtboardOrigin(canvas.width, canvas.height, bounds, view)
+  const worldX = (point.x - origin.x) / view.zoom
+  const worldY = (point.y - origin.y) / view.zoom
+  if (worldX < 0 || worldY < 0 || worldX > bounds.width || worldY > bounds.height) {
+    return null
+  }
+  const col = Math.floor(worldX / gridLayout.cellWidth)
+  const row = Math.floor(worldY / gridLayout.cellHeight)
+  const index = row * gridLayout.cols + col
+  return gridLayout.cells[index] ? index : null
 }

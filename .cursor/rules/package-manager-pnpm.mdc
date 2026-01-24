@@ -1,0 +1,7 @@
+---
+description: Use pnpm for package installs and scripts
+alwaysApply: true
+---
+
+# Package Manager
+- Use `pnpm` for dependency installs and running scripts in this project.

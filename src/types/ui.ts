@@ -52,7 +52,7 @@ export type ConfigState = {
   paper: PaperSettings
   templateGrid: TemplateGridSettings
   frames: FrameConfig[]
-  activeFrameIndex: number
+  selectedFrameIndices: number[]
 }
 
 export type SavedEntry = {

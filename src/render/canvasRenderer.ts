@@ -48,6 +48,8 @@ export type CompositeRenderOptions = {
   grid: GridLayout
   frames: FrameConfig[]
   templateGrid?: TemplateGridSettings
+  hoveredFrameIndex?: number | null
+  selectedFrameIndices?: number[]
 }
 
 export function renderSimulation(
@@ -107,7 +109,17 @@ export function renderComposite(
   states: SimulationState[],
   options: CompositeRenderOptions
 ): void {
-  const { canvasWidth, canvasHeight, view, mode, grid, frames, templateGrid } = options
+  const {
+    canvasWidth,
+    canvasHeight,
+    view,
+    mode,
+    grid,
+    frames,
+    templateGrid,
+    hoveredFrameIndex,
+    selectedFrameIndices
+  } = options
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
   if (mode === 'editor') {
     ctx.fillStyle = '#1f1f1f'
@@ -141,6 +153,8 @@ export function renderComposite(
     ctx.strokeRect(0, 0, bounds.width, bounds.height)
   }
 
+  const selectedSet = new Set(selectedFrameIndices ?? [])
+
   for (let index = 0; index < grid.cells.length; index += 1) {
     const cell = grid.cells[index]
     const state = states[index]
@@ -159,9 +173,40 @@ export function renderComposite(
       }
       drawGutterOverlay(ctx, state.bounds, grid.gutterPx * 0.5, frame.renderSettings.obstacleFill, edges)
     }
+
+    if (mode === 'editor') {
+      const isSelected = selectedSet.has(index)
+      const isHovered = hoveredFrameIndex === index
+      if (isSelected || isHovered) {
+        drawSelectionOutline(ctx, state.bounds, view.zoom, {
+          hovered: isHovered,
+          selected: isSelected
+        })
+      }
+    }
     ctx.restore()
   }
 
+  ctx.restore()
+}
+
+function drawSelectionOutline(
+  ctx: CanvasRenderingContext2D,
+  bounds: SimulationState['bounds'],
+  zoom: number,
+  state: { hovered: boolean; selected: boolean }
+): void {
+  ctx.save()
+  if (state.selected) {
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)'
+    ctx.lineWidth = 2 / zoom
+    ctx.strokeRect(0, 0, bounds.width, bounds.height)
+  }
+  if (state.hovered) {
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)'
+    ctx.lineWidth = 1 / zoom
+    ctx.strokeRect(0, 0, bounds.width, bounds.height)
+  }
   ctx.restore()
 }
 
