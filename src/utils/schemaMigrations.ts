@@ -2,7 +2,7 @@ import type { ConfigState, ExportSettings, FrameConfig, ObstacleSettings, Templa
 import type { SimulationParams } from '../engine/simulationState'
 import type { RenderSettings } from '../render/canvasRenderer'
 
-export const LATEST_SCHEMA_VERSION = 5
+export const LATEST_SCHEMA_VERSION = 6
 
 type Migration = (input: any) => any
 
@@ -47,6 +47,16 @@ const migrations: Record<number, Migration> = {
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(selectionSource, frames.length)
+    }
+  },
+  6: (input) => {
+    const frames = normalizeFrames(input)
+    return {
+      schemaVersion: 6,
+      paper: { ...input.paper },
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(input.selectedFrameIndices, frames.length)
     }
   }
 }
@@ -97,7 +107,9 @@ function normalizeTemplateGrid(input: Partial<TemplateGridSettings> | undefined)
 
 function normalizeFrames(input: any): FrameConfig[] {
   if (Array.isArray(input.frames) && input.frames.length > 0) {
-    return input.frames.map((frame: unknown) => normalizeFrame(frame as Partial<FrameConfig>))
+    return input.frames.map((frame: unknown, index: number) =>
+      normalizeFrame(frame as Partial<FrameConfig>, index)
+    )
   }
   const legacy = input as {
     params?: SimulationParams
@@ -115,7 +127,7 @@ function normalizeFrames(input: any): FrameConfig[] {
       exportSettings: legacy.exportSettings,
       seed: legacy.seed,
       randomizeSeed: legacy.randomizeSeed
-    })
+    }, 0)
   ]
 }
 
@@ -139,8 +151,12 @@ function normalizeFrame(frame: Partial<FrameConfig> & {
   obstacles?: ObstacleSettings
   renderSettings?: RenderSettings
   exportSettings?: ExportSettings
-}): FrameConfig {
+}, index: number): FrameConfig {
   return {
+    name:
+      typeof frame.name === 'string' && frame.name.trim().length > 0
+        ? frame.name
+        : defaultFrameName(index),
     params: {
       influenceRadius: Number(frame.params?.influenceRadius ?? 80),
       killRadius: Number(frame.params?.killRadius ?? 16),
@@ -182,4 +198,8 @@ function normalizeFrame(frame: Partial<FrameConfig> & {
     seed: Number.isFinite(frame.seed) ? Number(frame.seed) : 0,
     randomizeSeed: typeof frame.randomizeSeed === 'boolean' ? frame.randomizeSeed : true
   }
+}
+
+function defaultFrameName(index: number): string {
+  return `Frame ${index + 1}`
 }

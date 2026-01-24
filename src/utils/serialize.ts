@@ -244,7 +244,8 @@ function frameToCompact(frame: FrameConfig): CompactConfig {
       frame.exportSettings.durationMode === 'fixed' ? 0 : 1
     ],
     frame.seed,
-    frame.randomizeSeed ? 1 : 0
+    frame.randomizeSeed ? 1 : 0,
+    frame.name
   ]
 }
 
@@ -254,6 +255,7 @@ function frameFromCompact(input: CompactConfig): FrameConfig {
   const render = input[2] as CompactConfig
   const exportSettings = input[3] as CompactConfig
   return {
+    name: typeof input[6] === 'string' ? input[6] : '',
     params: {
       influenceRadius: Number(params[0]),
       killRadius: Number(params[1]),

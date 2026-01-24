@@ -39,6 +39,7 @@ type ControlsPanelProps = {
   onToggleFrame: (index: number) => void;
   onSelectFrameRange: (startIndex: number, endIndex: number) => void;
   onReorderFrames: (startIndex: number, endIndex: number) => void;
+  onRenameFrame: (index: number, name: string) => void;
   onUpdateSelectedFrames: (
     updater: (frame: FrameConfig) => FrameConfig,
     options?: { rebuildSimulation?: boolean; seedOverride?: number },
@@ -80,6 +81,7 @@ export default function ControlsPanel({
   onToggleFrame,
   onSelectFrameRange,
   onReorderFrames,
+  onRenameFrame,
   onUpdateSelectedFrames,
   onToggleRunning,
   onResetSimulation,
@@ -290,6 +292,7 @@ export default function ControlsPanel({
         onToggleFrame={onToggleFrame}
         onSelectFrameRange={onSelectFrameRange}
         onReorderFrames={onReorderFrames}
+        onRenameFrame={onRenameFrame}
       />
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">

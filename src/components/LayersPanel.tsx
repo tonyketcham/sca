@@ -15,6 +15,7 @@ type LayersPanelProps = {
   onToggleFrame: (index: number) => void
   onSelectFrameRange: (startIndex: number, endIndex: number) => void
   onReorderFrames: (startIndex: number, endIndex: number) => void
+  onRenameFrame: (index: number, name: string) => void
 }
 
 type DragData = {
@@ -30,7 +31,8 @@ export default function LayersPanel({
   onSelectFrame,
   onToggleFrame,
   onSelectFrameRange,
-  onReorderFrames
+  onReorderFrames,
+  onRenameFrame
 }: LayersPanelProps) {
   const isProjectSelected = selectedFrameIndices.length === 0
   const columnCount = Math.max(1, templateGrid.cols)
@@ -72,11 +74,12 @@ export default function LayersPanel({
               <span className="font-semibold">Project</span>
               <span className="text-[10px] text-zinc-500">Paper + Grid</span>
             </button>
-            {frames.map((_, index) => (
+            {frames.map((frame, index) => (
               <FrameLayerRow
                 key={`frame-layer-${index}`}
                 index={index}
                 columnCount={columnCount}
+                frameName={frame.name}
                 isSelected={selectedFrameIndices.includes(index)}
                 anchorIndex={anchorIndex}
                 onSelectFrame={onSelectFrame}
@@ -84,6 +87,7 @@ export default function LayersPanel({
                 onSelectFrameRange={onSelectFrameRange}
                 onUpdateAnchor={setAnchorIndex}
                 onReorderFrames={onReorderFrames}
+                onRenameFrame={onRenameFrame}
               />
             ))}
           </div>
@@ -96,6 +100,7 @@ export default function LayersPanel({
 type FrameLayerRowProps = {
   index: number
   columnCount: number
+  frameName: string
   isSelected: boolean
   anchorIndex: number | null
   onSelectFrame: (index: number) => void
@@ -103,22 +108,28 @@ type FrameLayerRowProps = {
   onSelectFrameRange: (startIndex: number, endIndex: number) => void
   onUpdateAnchor: (index: number) => void
   onReorderFrames: (startIndex: number, endIndex: number) => void
+  onRenameFrame: (index: number, name: string) => void
 }
 
 function FrameLayerRow({
   index,
   columnCount,
+  frameName,
   isSelected,
   anchorIndex,
   onSelectFrame,
   onToggleFrame,
   onSelectFrameRange,
   onUpdateAnchor,
-  onReorderFrames
+  onReorderFrames,
+  onRenameFrame
 }: FrameLayerRowProps) {
   const rowRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const [isDraggedOver, setIsDraggedOver] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [draftName, setDraftName] = useState(frameName)
 
   useEffect(() => {
     const element = rowRef.current
@@ -147,13 +158,25 @@ function FrameLayerRow({
     )
   }, [index, onReorderFrames])
 
+  useEffect(() => {
+    setDraftName(frameName)
+  }, [frameName])
+
+  useEffect(() => {
+    if (!isEditing) return
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [isEditing])
+
   const label = useMemo(() => {
     const row = Math.floor(index / columnCount)
     const col = index % columnCount
-    return `Frame ${index + 1} (R${row + 1}, C${col + 1})`
-  }, [columnCount, index])
+    const baseName = frameName.trim() || `Frame ${index + 1}`
+    return `${baseName} (R${row + 1}, C${col + 1})`
+  }, [columnCount, frameName, index])
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isEditing) return
     if (event.shiftKey) {
       onSelectFrameRange(anchorIndex ?? index, index)
       onUpdateAnchor(index)
@@ -170,6 +193,20 @@ function FrameLayerRow({
     onUpdateAnchor(index)
   }
 
+  const commitName = () => {
+    const nextName = draftName.trim() || frameName.trim() || `Frame ${index + 1}`
+    setDraftName(nextName)
+    setIsEditing(false)
+    if (nextName !== frameName) {
+      onRenameFrame(index, nextName)
+    }
+  }
+
+  const cancelName = () => {
+    setDraftName(frameName)
+    setIsEditing(false)
+  }
+
   return (
     <div
       ref={rowRef}
@@ -184,7 +221,36 @@ function FrameLayerRow({
       )}
     >
       <GripVertical className="h-3.5 w-3.5 text-zinc-500" />
-      <span className="flex-1">{label}</span>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          className="flex-1 rounded-sm border border-zinc-700 bg-zinc-950 px-1 py-0.5 text-[11px] text-zinc-100 outline-none"
+          value={draftName}
+          onChange={(event) => setDraftName(event.target.value)}
+          onBlur={commitName}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              commitName()
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              cancelName()
+            }
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+        />
+      ) : (
+        <span
+          className="flex-1"
+          onDoubleClick={(event) => {
+            event.stopPropagation()
+            setIsEditing(true)
+          }}
+        >
+          {label}
+        </span>
+      )}
     </div>
   )
 }

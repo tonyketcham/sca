@@ -32,6 +32,7 @@ export type TemplateGridSettings = {
 }
 
 export type FrameConfig = {
+  name: string
   params: import('../engine/simulationState').SimulationParams
   obstacles: ObstacleSettings
   renderSettings: import('../render/canvasRenderer').RenderSettings

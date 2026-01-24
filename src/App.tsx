@@ -91,8 +91,13 @@ type GridCellLayout = {
   bounds: Bounds;
 };
 
-function createDefaultFrame(): FrameConfig {
+function createFrameName(index: number): string {
+  return `Frame ${index + 1}`;
+}
+
+function createDefaultFrame(name?: string): FrameConfig {
   return {
+    name: name ?? 'Frame',
     params: { ...DEFAULT_PARAMS },
     obstacles: { ...DEFAULT_OBSTACLES },
     renderSettings: { ...DEFAULT_RENDER },
@@ -108,7 +113,7 @@ export default function App() {
     DEFAULT_TEMPLATE_GRID,
   );
   const [frames, setFrames] = useState<FrameConfig[]>(() => [
-    createDefaultFrame(),
+    createDefaultFrame(createFrameName(0)),
   ]);
   const [selectedFrameIndices, setSelectedFrameIndices] = useState<number[]>([0]);
   const [running, setRunning] = useState(true);
@@ -621,6 +626,14 @@ export default function App() {
     );
   }, []);
 
+  const handleRenameFrame = useCallback((index: number, name: string) => {
+    setFrames((prev) =>
+      prev.map((frame, frameIndex) =>
+        frameIndex === index ? { ...frame, name } : frame,
+      ),
+    );
+  }, []);
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-zinc-950">
       <aside className="h-screen w-[360px] border-r border-zinc-800 bg-zinc-950">
@@ -639,6 +652,7 @@ export default function App() {
           onToggleFrame={toggleFrameSelection}
           onSelectFrameRange={selectFrameRange}
           onReorderFrames={handleReorderFrames}
+          onRenameFrame={handleRenameFrame}
           onUpdateSelectedFrames={updateSelectedFrames}
           onToggleRunning={handleToggleRunning}
           onResetSimulation={handleResetSimulation}
@@ -704,7 +718,11 @@ function normalizeFrames(
   targetLength: number,
 ): FrameConfig[] {
   const safeFrames = Array.isArray(frames) ? frames : [];
-  const normalized = safeFrames.map((frame) => ({
+  const normalized = safeFrames.map((frame, index) => ({
+    name:
+      typeof frame?.name === 'string' && frame.name.trim().length > 0
+        ? frame.name
+        : createFrameName(index),
     params: { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) },
     obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
     renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
@@ -718,7 +736,7 @@ function normalizeFrames(
   }
   const next = [...normalized];
   while (next.length < Math.max(1, targetLength)) {
-    next.push(createDefaultFrame());
+    next.push(createDefaultFrame(createFrameName(next.length)));
   }
   return next;
 }
@@ -734,7 +752,7 @@ function resizeFrames(
   }
   const next = [...frames];
   while (next.length < targetLength) {
-    next.push(createDefaultFrame());
+    next.push(createDefaultFrame(createFrameName(next.length)));
   }
   return next;
 }
