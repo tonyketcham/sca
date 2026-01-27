@@ -265,7 +265,7 @@ export default function ControlsPanel({
         aria-expanded={isOpen}
         aria-controls={sectionId}
         onClick={() => toggleSection(key)}
-        className="flex w-full items-center justify-between gap-2 text-left"
+        className="group flex w-full items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-2 text-left transition-colors duration-200 ease-out hover:bg-zinc-900/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500/70 motion-reduce:transition-none"
       >
         <div className="space-y-0.5">
           <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-200">
@@ -275,14 +275,20 @@ export default function ControlsPanel({
             <div className="text-[10px] text-zinc-500">{description}</div>
           ) : null}
         </div>
-        <span className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1 text-[10px] text-zinc-400">
-          {isOpen ? 'v' : '>'}
+        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950/60 text-[10px] text-zinc-400 transition-colors duration-200 ease-out group-hover:border-zinc-700 group-hover:text-zinc-200 motion-reduce:transition-none">
+          <span
+            className={`transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+              isOpen ? 'rotate-90' : ''
+            }`}
+          >
+            {'>'}
+          </span>
         </span>
       </button>
     );
   };
   return (
-    <div className="flex h-full flex-col text-[11px] text-zinc-300">
+    <div className="flex h-full flex-col bg-zinc-950/30 text-[11px] text-zinc-300">
       <LayersPanel
         frames={frames}
         templateGrid={templateGrid}
@@ -296,7 +302,7 @@ export default function ControlsPanel({
       />
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
-          <header className="">
+          <header className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/40 px-3 py-2">
             <h1 className="text-[13px] font-semibold text-white">SCA Editor</h1>
             <p className="text-[11px] text-zinc-400">
               Space colonization growth with real-time parameter control.
@@ -545,7 +551,7 @@ export default function ControlsPanel({
                         </>
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
                         <Label className="text-[11px] text-zinc-200">
                           Avoid obstacles
@@ -588,7 +594,7 @@ export default function ControlsPanel({
                       </Button>
                     </div>
                     <div className="grid gap-2">
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
                           <Label className="text-[11px] text-zinc-200">
                             Randomize seed
@@ -699,7 +705,7 @@ export default function ControlsPanel({
                       </div>
                     </div>
                     <div className="grid gap-2">
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
                           <Label className="text-[11px] text-zinc-200">
                             Show gutter
@@ -718,7 +724,7 @@ export default function ControlsPanel({
                           }
                         />
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
                           <Label className="text-[11px] text-zinc-200">
                             Gutter as obstacles
@@ -1081,7 +1087,7 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
                         <Label className="text-[11px] text-zinc-200">
                           Show obstacles
@@ -1105,7 +1111,7 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
                         <Label className="text-[11px] text-zinc-200">
                           Show attractors
@@ -1129,7 +1135,7 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
                         <Label className="text-[11px] text-zinc-200">
                           Show nodes
@@ -1239,7 +1245,7 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
                         <Label className="text-[11px] text-zinc-200">
                           Auto duration
@@ -1327,7 +1333,7 @@ export default function ControlsPanel({
                         savedEntries.map((entry) => (
                           <div
                             key={entry.id}
-                            className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300"
+                            className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none"
                             onMouseEnter={() => onPreviewEntry(entry.id)}
                             onMouseLeave={onPreviewEnd}
                           >

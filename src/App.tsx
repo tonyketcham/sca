@@ -318,19 +318,33 @@ export default function App() {
   const primaryFrameIndex = selectedFrameIndices[0] ?? 0;
 
   useEffect(() => {
-    const id = window.setInterval(() => {
+    const updateStats = () => {
       const state = simulationRef.current[primaryFrameIndex];
       if (!state) return;
-      setStats({
+      const next = {
         nodes: state.nodes.length,
         attractors: state.attractors.length,
         iterations: state.iterations,
         completed: state.completed,
-      });
-    }, 200);
+      };
+      setStats((prev) =>
+        prev.nodes === next.nodes &&
+        prev.attractors === next.attractors &&
+        prev.iterations === next.iterations &&
+        prev.completed === next.completed
+          ? prev
+          : next
+      );
+    };
 
+    updateStats();
+    if (!running) {
+      return;
+    }
+
+    const id = window.setInterval(updateStats, 200);
     return () => window.clearInterval(id);
-  }, [primaryFrameIndex]);
+  }, [primaryFrameIndex, running]);
 
   const exportCanvas = useCallback(() => {
     const canvas = document.createElement('canvas');

@@ -37,6 +37,7 @@ export default function CanvasView({
     pan: { x: 0, y: 0 },
     zoom: 1
   })
+  const canvasSizeRef = useRef({ width: 1, height: 1, dpr: 1 })
   const isDraggingRef = useRef(false)
   const lastPointerRef = useRef<Vec2>({ x: 0, y: 0 })
   const pointerDownRef = useRef<{ x: number; y: number; frameIndex: number | null } | null>(null)
@@ -51,8 +52,14 @@ export default function CanvasView({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect
-        canvas.width = Math.max(1, Math.floor(width))
-        canvas.height = Math.max(1, Math.floor(height))
+        const dpr = window.devicePixelRatio || 1
+        const logicalWidth = Math.max(1, Math.floor(width))
+        const logicalHeight = Math.max(1, Math.floor(height))
+        canvas.style.width = `${logicalWidth}px`
+        canvas.style.height = `${logicalHeight}px`
+        canvas.width = Math.max(1, Math.floor(logicalWidth * dpr))
+        canvas.height = Math.max(1, Math.floor(logicalHeight * dpr))
+        canvasSizeRef.current = { width: logicalWidth, height: logicalHeight, dpr }
       }
     })
     resizeObserver.observe(container)
@@ -149,7 +156,8 @@ export default function CanvasView({
         width: gridLayout.cellWidth * gridLayout.cols,
         height: gridLayout.cellHeight * gridLayout.rows
       }
-      const origin = getArtboardOrigin(canvas.width, canvas.height, bounds, viewRef.current)
+      const { width, height } = canvasSizeRef.current
+      const origin = getArtboardOrigin(width, height, bounds, viewRef.current)
       const worldPoint = {
         x: (pointer.x - origin.x) / zoom,
         y: (pointer.y - origin.y) / zoom
@@ -161,8 +169,8 @@ export default function CanvasView({
 
       viewRef.current.zoom = nextZoom
       viewRef.current.pan = {
-        x: nextOrigin.x - (canvas.width - bounds.width * nextZoom) * 0.5,
-        y: nextOrigin.y - (canvas.height - bounds.height * nextZoom) * 0.5
+        x: nextOrigin.x - (width - bounds.width * nextZoom) * 0.5,
+        y: nextOrigin.y - (height - bounds.height * nextZoom) * 0.5
       }
     }
 
@@ -180,7 +188,7 @@ export default function CanvasView({
       if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
         delta *= 16
       } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-        delta *= canvas.height
+        delta *= canvasSizeRef.current.height
       }
 
       const zoomSpeed = event.ctrlKey ? 0.025 : 0.015
@@ -208,10 +216,11 @@ export default function CanvasView({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const animate = () => {
+        const { width, height, dpr } = canvasSizeRef.current
       const frames = framesRef.current
       const states = simulationRef.current
 
@@ -227,9 +236,10 @@ export default function CanvasView({
         }
       }
 
-      renderComposite(ctx, states, {
-        canvasWidth: canvas.width,
-        canvasHeight: canvas.height,
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        renderComposite(ctx, states, {
+          canvasWidth: width,
+          canvasHeight: height,
         view: viewRef.current,
         mode: 'editor',
         grid: gridLayout,
@@ -283,7 +293,9 @@ function getFrameIndexAtPoint(
     width: gridLayout.cellWidth * gridLayout.cols,
     height: gridLayout.cellHeight * gridLayout.rows
   }
-  const origin = getArtboardOrigin(canvas.width, canvas.height, bounds, view)
+  const canvasWidth = canvas.clientWidth || canvas.width
+  const canvasHeight = canvas.clientHeight || canvas.height
+  const origin = getArtboardOrigin(canvasWidth, canvasHeight, bounds, view)
   const worldX = (point.x - origin.x) / view.zoom
   const worldY = (point.y - origin.y) / view.zoom
   if (worldX < 0 || worldY < 0 || worldX > bounds.width || worldY > bounds.height) {
