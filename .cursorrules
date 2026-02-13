@@ -2,3 +2,5 @@ When adding, renaming, or changing any configuration parameter or schema field, 
 - add a new schema version and pure migration functions that convert older versions to the latest in `src/utils/schemaMigrations.ts`
 - update serialization in `src/utils/serialize.ts` to use the latest version and call migrations in decode/load paths
 - keep migrations deterministic and side-effect free (no I/O, no randomness, no global state)
+
+Never use `any`, avoid using `unknown`. Use complex type utilities when possible, such as mapped or conditional types.
