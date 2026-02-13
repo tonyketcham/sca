@@ -22,6 +22,7 @@ import type {
   TemplateGridSettings,
 } from './types/ui';
 import { useSavedConfigs } from './hooks/useSavedConfigs';
+import { useFrameClipboard } from './hooks/useFrameClipboard';
 import { decodeConfig, encodeConfig } from './utils/serialize';
 import { createSeed, createSeededRng } from './utils/rng';
 import { LATEST_SCHEMA_VERSION } from './utils/schemaMigrations';
@@ -558,6 +559,12 @@ export default function App() {
     },
     [hasFrameSelection, rebuildFrameSimulation, selectedFrameIndices],
   );
+
+  useFrameClipboard({
+    frames,
+    selectedFrameIndices,
+    onPasteToSelected: updateSelectedFrames,
+  });
 
   const handleResetSimulation = useCallback(() => {
     if (!hasFrameSelection) return;
