@@ -133,9 +133,15 @@ export default function App() {
   const urlUpdateRef = useRef<number | null>(null);
   const simulationRef = useRef<SimulationState[]>([]);
 
+  const selectedFrameIndicesRef = useRef(selectedFrameIndices);
+
   useEffect(() => {
     framesRef.current = frames;
   }, [frames]);
+
+  useEffect(() => {
+    selectedFrameIndicesRef.current = selectedFrameIndices;
+  }, [selectedFrameIndices]);
 
   const boundsPx = useMemo(
     () => ({
@@ -347,23 +353,75 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [primaryFrameIndex, running]);
 
+  const getExportScope = useCallback(() => {
+    const indices = selectedFrameIndicesRef.current;
+    const allFrames = framesRef.current;
+    const allStates = simulationRef.current;
+
+    if (indices.length === 0) {
+      return {
+        grid: gridLayout,
+        frames: allFrames,
+        states: allStates,
+        widthInUnits: paper.width,
+        heightInUnits: paper.height,
+      };
+    }
+
+    const subFrames = indices
+      .map((i) => allFrames[i])
+      .filter((f): f is FrameConfig => f !== undefined);
+    const subStates = indices
+      .map((i) => allStates[i])
+      .filter((s): s is SimulationState => s !== undefined);
+    const n = subFrames.length;
+    const { cellWidth, cellHeight, gutterPx } = gridLayout;
+
+    const subGrid = {
+      rows: 1,
+      cols: n,
+      cellWidth,
+      cellHeight,
+      gutterPx,
+      cells: subFrames.map((_, i) => ({
+        index: i,
+        row: 0,
+        col: i,
+        offset: { x: i * cellWidth, y: 0 },
+        bounds: { width: cellWidth, height: cellHeight },
+      })),
+    };
+
+    const cellWidthUnits = paper.width / gridLayout.cols;
+    const cellHeightUnits = paper.height / gridLayout.rows;
+
+    return {
+      grid: subGrid,
+      frames: subFrames,
+      states: subStates,
+      widthInUnits: cellWidthUnits * n,
+      heightInUnits: cellHeightUnits,
+    };
+  }, [gridLayout, paper.width, paper.height]);
+
   const exportCanvas = useCallback(() => {
+    const scope = getExportScope();
     const canvas = document.createElement('canvas');
-    canvas.width = Math.round(boundsPx.width);
-    canvas.height = Math.round(boundsPx.height);
+    canvas.width = Math.round(scope.grid.cellWidth * scope.grid.cols);
+    canvas.height = Math.round(scope.grid.cellHeight * scope.grid.rows);
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return null;
 
-    renderComposite(ctx, simulationRef.current, {
+    renderComposite(ctx, scope.states, {
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
       view: { pan: { x: 0, y: 0 }, zoom: 1 },
       mode: 'export',
-      grid: gridLayout,
-      frames: framesRef.current,
+      grid: scope.grid,
+      frames: scope.frames,
     });
     return canvas;
-  }, [boundsPx.height, boundsPx.width, gridLayout]);
+  }, [getExportScope]);
 
   const handleExportPng = useCallback(() => {
     const canvas = exportCanvas();
@@ -375,26 +433,28 @@ export default function App() {
   }, [exportCanvas]);
 
   const handleExportSvg = useCallback(() => {
+    const scope = getExportScope();
     const svg = exportCompositeSvg({
-      states: simulationRef.current,
-      frames: framesRef.current,
-      grid: gridLayout,
+      states: scope.states,
+      frames: scope.frames,
+      grid: scope.grid,
       unit: paper.unit,
-      widthInUnits: paper.width,
-      heightInUnits: paper.height,
+      widthInUnits: scope.widthInUnits,
+      heightInUnits: scope.heightInUnits,
     });
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     downloadBlob(blob, `root-growth-${Date.now()}.svg`);
-  }, [gridLayout, paper.height, paper.unit, paper.width]);
+  }, [getExportScope, paper.unit]);
 
   const handleExportMp4 = useCallback(async () => {
     try {
-      const activeFrame = framesRef.current[primaryFrameIndex];
+      const scope = getExportScope();
+      const activeFrame = scope.frames[0];
       if (!activeFrame) return;
       const blob = await encodeCompositeMp4({
-        frames: framesRef.current,
-        grid: gridLayout,
-        states: simulationRef.current,
+        frames: scope.frames,
+        grid: scope.grid,
+        states: scope.states,
         fps: activeFrame.exportSettings.fps,
         durationSeconds: activeFrame.exportSettings.durationSeconds,
         durationMode: activeFrame.exportSettings.durationMode,
@@ -405,7 +465,7 @@ export default function App() {
       console.error(error);
       alert(error instanceof Error ? error.message : 'MP4 export failed.');
     }
-  }, [gridLayout, primaryFrameIndex]);
+  }, [getExportScope]);
 
   const handleToggleRunning = useCallback(() => {
     setRunning((value) => !value);

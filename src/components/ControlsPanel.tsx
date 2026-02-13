@@ -1164,141 +1164,154 @@ export default function ControlsPanel({
               </section>
             ) : null}
 
-            {hasFrameSelection ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Export', 'export')}
-                {openSections.export ? (
-                  <div id="section-export" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label>MP4 FPS</Label>
-                        <ScrubbableNumberInput
-                          min={1}
-                          integer
-                          value={mixedExportSettings?.fps ?? null}
-                          placeholder={
-                            mixedExportSettings?.fps === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              exportSettings: {
-                                ...frame.exportSettings,
-                                fps: next,
-                              },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>MP4 Duration (s)</Label>
-                        <ScrubbableNumberInput
-                          min={1}
-                          integer
-                          value={mixedExportSettings?.durationSeconds ?? null}
-                          placeholder={
-                            mixedExportSettings?.durationSeconds === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              exportSettings: {
-                                ...frame.exportSettings,
-                                durationSeconds: next,
-                              },
-                            }))
-                          }
-                          className={
-                            mixedExportSettings?.durationMode === 'auto'
-                              ? 'opacity-60'
-                              : undefined
-                          }
-                          disabled={
-                            mixedExportSettings?.durationMode === 'auto'
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>MP4 Steps/frame</Label>
-                        <ScrubbableNumberInput
-                          min={1}
-                          integer
-                          value={mixedExportSettings?.stepsPerFrame ?? null}
-                          placeholder={
-                            mixedExportSettings?.stepsPerFrame === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              exportSettings: {
-                                ...frame.exportSettings,
-                                stepsPerFrame: next,
-                              },
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
-                      <div>
-                        <Label className="text-[11px] text-zinc-200">
-                          Auto duration
-                        </Label>
-                        <div className="text-[10px] text-zinc-500">
-                          {mixedExportSettings?.durationMode === null
-                            ? 'Mixed'
-                            : 'Stop when growth completes.'}
+            <section className="space-y-3 px-4 py-3">
+              {renderSectionHeader('Export', 'export')}
+              {openSections.export ? (
+                <div id="section-export" className="space-y-3">
+                  {hasFrameSelection ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <Label>MP4 FPS</Label>
+                          <ScrubbableNumberInput
+                            min={1}
+                            integer
+                            value={mixedExportSettings?.fps ?? null}
+                            placeholder={
+                              mixedExportSettings?.fps === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                exportSettings: {
+                                  ...frame.exportSettings,
+                                  fps: next,
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>MP4 Duration (s)</Label>
+                          <ScrubbableNumberInput
+                            min={1}
+                            integer
+                            value={
+                              mixedExportSettings?.durationSeconds ?? null
+                            }
+                            placeholder={
+                              mixedExportSettings?.durationSeconds === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                exportSettings: {
+                                  ...frame.exportSettings,
+                                  durationSeconds: next,
+                                },
+                              }))
+                            }
+                            className={
+                              mixedExportSettings?.durationMode === 'auto'
+                                ? 'opacity-60'
+                                : undefined
+                            }
+                            disabled={
+                              mixedExportSettings?.durationMode === 'auto'
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>MP4 Steps/frame</Label>
+                          <ScrubbableNumberInput
+                            min={1}
+                            integer
+                            value={
+                              mixedExportSettings?.stepsPerFrame ?? null
+                            }
+                            placeholder={
+                              mixedExportSettings?.stepsPerFrame === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                exportSettings: {
+                                  ...frame.exportSettings,
+                                  stepsPerFrame: next,
+                                },
+                              }))
+                            }
+                          />
                         </div>
                       </div>
-                      <Switch
-                        checked={mixedExportSettings?.durationMode === 'auto'}
-                        onCheckedChange={(checked) =>
-                          onUpdateSelectedFrames((frame) => ({
-                            ...frame,
-                            exportSettings: {
-                              ...frame.exportSettings,
-                              durationMode: checked ? 'auto' : 'fixed',
-                            },
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={onExportPng}
-                        variant="secondary"
-                        size="sm"
-                        className="h-7 px-2"
-                      >
-                        Export PNG
-                      </Button>
-                      <Button
-                        onClick={onExportSvg}
-                        variant="secondary"
-                        size="sm"
-                        className="h-7 px-2"
-                      >
-                        Export SVG
-                      </Button>
-                      <Button
-                        onClick={onExportMp4}
-                        variant="default"
-                        size="sm"
-                        className="h-7 px-2"
-                      >
-                        Export MP4
-                      </Button>
-                    </div>
+                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                        <div>
+                          <Label className="text-[11px] text-zinc-200">
+                            Auto duration
+                          </Label>
+                          <div className="text-[10px] text-zinc-500">
+                            {mixedExportSettings?.durationMode === null
+                              ? 'Mixed'
+                              : 'Stop when growth completes.'}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={
+                            mixedExportSettings?.durationMode === 'auto'
+                          }
+                          onCheckedChange={(checked) =>
+                            onUpdateSelectedFrames((frame) => ({
+                              ...frame,
+                              exportSettings: {
+                                ...frame.exportSettings,
+                                durationMode: checked ? 'auto' : 'fixed',
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  <div className="text-[10px] text-zinc-500">
+                    {hasFrameSelection
+                      ? `Exports ${selectedFrames.length === 1 ? 'selected frame' : `${selectedFrames.length} selected frames`}`
+                      : 'Exports entire project'}
                   </div>
-                ) : null}
-              </section>
-            ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={onExportPng}
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2"
+                    >
+                      Export PNG
+                    </Button>
+                    <Button
+                      onClick={onExportSvg}
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2"
+                    >
+                      Export SVG
+                    </Button>
+                    <Button
+                      onClick={onExportMp4}
+                      variant="default"
+                      size="sm"
+                      className="h-7 px-2"
+                    >
+                      Export MP4
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
 
             {showProjectControls ? (
               <section className="space-y-3 px-4 py-3">
