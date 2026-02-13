@@ -6,6 +6,11 @@ type Influence = {
   count: number
 }
 
+// #region agent log - debug counter
+let _debugLogCount = 0
+const _DEBUG_MAX_LOGS = 80
+// #endregion
+
 export function stepSimulation(state: SimulationState, params: SimulationParams): number {
   if (state.completed) {
     return 0
@@ -61,6 +66,16 @@ export function stepSimulation(state: SimulationState, params: SimulationParams)
   let added = 0
   const nextNodes = [...state.nodes]
 
+  // #region agent log - build child count map
+  const _childCountByParent = new Map<number, number>()
+  for (let _ci = 0; _ci < state.nodes.length; _ci++) {
+    const _n = state.nodes[_ci]
+    if (_n.parent !== null) {
+      _childCountByParent.set(_n.parent, (_childCountByParent.get(_n.parent) ?? 0) + 1)
+    }
+  }
+  // #endregion
+
   for (const [nodeIndex, influence] of influences) {
     if (nextNodes.length >= params.maxNodes) {
       break
@@ -85,6 +100,20 @@ export function stepSimulation(state: SimulationState, params: SimulationParams)
       continue
     }
 
+    // Skip candidates that are too close to an existing node (prevents hot spots)
+    const minDistSq = minDistanceSquared(candidate, nextNodes)
+    const proximityThresholdSq = params.stepSize * params.stepSize * 0.25
+    if (minDistSq < proximityThresholdSq) {
+      // #region agent log - H1 fix: log skipped duplicates
+      if (_debugLogCount < _DEBUG_MAX_LOGS) {
+        _debugLogCount++
+        const _parentChildCount = _childCountByParent.get(nodeIndex) ?? 0
+        fetch('http://127.0.0.1:7242/ingest/914c7885-5c16-45c0-aab7-c865f55029d4',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'spaceColonization.ts:skip-duplicate',message:'Skipped near-duplicate candidate (FIX ACTIVE)',data:{hypothesisId:'H1_fix',runId:'post-fix',parentIndex:nodeIndex,parentPos:{x:node.x,y:node.y},candidatePos:{x:candidate.x,y:candidate.y},minDistToExisting:Math.sqrt(minDistSq),threshold:params.stepSize*0.5,parentChildCount:_parentChildCount,influenceCount:influence.count,attractorsRemaining:state.attractors.length,iteration:state.iterations,totalNodes:nextNodes.length},timestamp:Date.now()})}).catch(()=>{})
+      }
+      // #endregion
+      continue
+    }
+
     nextNodes.push({
       x: candidate.x,
       y: candidate.y,
@@ -96,11 +125,31 @@ export function stepSimulation(state: SimulationState, params: SimulationParams)
   state.nodes = nextNodes
   state.iterations += 1
 
+  // #region agent log - step summary when hot spots detected
+  if (_debugLogCount > 0 && _debugLogCount < _DEBUG_MAX_LOGS && state.iterations % 100 === 0) {
+    _debugLogCount++
+    fetch('http://127.0.0.1:7242/ingest/914c7885-5c16-45c0-aab7-c865f55029d4',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'spaceColonization.ts:step-summary',message:'Periodic step summary',data:{hypothesisId:'summary',iteration:state.iterations,totalNodes:state.nodes.length,attractorsRemaining:state.attractors.length,addedThisStep:added,influencedNodes:influences.size,completed:state.completed},timestamp:Date.now()})}).catch(()=>{})
+  }
+  // #endregion
+
   if (state.attractors.length === 0 || added === 0 || state.nodes.length >= params.maxNodes) {
     state.completed = true
   }
 
   return added
+}
+
+function minDistanceSquared(point: Vec2, nodes: ReadonlyArray<Vec2>): number {
+  let min = Number.POSITIVE_INFINITY
+  for (let i = 0; i < nodes.length; i += 1) {
+    const dx = point.x - nodes[i].x
+    const dy = point.y - nodes[i].y
+    const distSq = dx * dx + dy * dy
+    if (distSq < min) {
+      min = distSq
+    }
+  }
+  return min
 }
 
 function normalize(vec: Vec2): Vec2 {
