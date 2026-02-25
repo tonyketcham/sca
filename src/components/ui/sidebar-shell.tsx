@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const sidebarShellVariants = cva(
-  'flex h-full w-[280px] min-w-[280px] flex-col bg-surface/50 text-foreground backdrop-blur-xl',
+  'flex h-full w-[var(--sidebar-width)] min-w-[var(--sidebar-width)] flex-col bg-surface/50 text-foreground backdrop-blur-xl',
   {
     variants: {
       side: {

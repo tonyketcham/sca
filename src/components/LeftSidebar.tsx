@@ -8,7 +8,6 @@ import type {
 import type { Unit } from '../geometry/units';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import {
   Select,
   SelectContent,
@@ -16,13 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Switch } from './ui/switch';
 import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
 import { ScrollArea } from './ui/scroll-area';
-import { ControlRow } from './ui/control-row';
 import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
 import { SectionHeading } from './ui/section-heading';
 import { InsetPanel } from './ui/inset-panel';
+import { SwitchControlRow } from './ui/switch-control-row';
+import { LabeledField } from './ui/labeled-field';
 import LayersPanel from './LayersPanel';
 
 type LeftSidebarProps = {
@@ -150,10 +149,10 @@ export default function LeftSidebar({
               <div className="space-y-4">
                 <SectionHeading>Paper Setup</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('paper-width')}>
-                      Width ({paper.unit})
-                    </Label>
+                  <LabeledField
+                    id={fieldId('paper-width')}
+                    label={`Width (${paper.unit})`}
+                  >
                     <ScrubbableNumberInput
                       id={fieldId('paper-width')}
                       min={1}
@@ -162,11 +161,11 @@ export default function LeftSidebar({
                         onPaperChange({ ...paper, width: next })
                       }
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('paper-height')}>
-                      Height ({paper.unit})
-                    </Label>
+                  </LabeledField>
+                  <LabeledField
+                    id={fieldId('paper-height')}
+                    label={`Height (${paper.unit})`}
+                  >
                     <ScrubbableNumberInput
                       id={fieldId('paper-height')}
                       min={1}
@@ -175,9 +174,8 @@ export default function LeftSidebar({
                         onPaperChange({ ...paper, height: next })
                       }
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('paper-unit')}>Units</Label>
+                  </LabeledField>
+                  <LabeledField id={fieldId('paper-unit')} label="Units">
                     <Select
                       value={paper.unit}
                       onValueChange={(value) =>
@@ -193,9 +191,8 @@ export default function LeftSidebar({
                         <SelectItem value="mm">Millimeters</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('paper-dpi')}>DPI</Label>
+                  </LabeledField>
+                  <LabeledField id={fieldId('paper-dpi')} label="DPI">
                     <ScrubbableNumberInput
                       id={fieldId('paper-dpi')}
                       min={36}
@@ -205,15 +202,14 @@ export default function LeftSidebar({
                         onPaperChange({ ...paper, dpi: next })
                       }
                     />
-                  </div>
+                  </LabeledField>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <SectionHeading>Template Grid</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('template-rows')}>Rows</Label>
+                  <LabeledField id={fieldId('template-rows')} label="Rows">
                     <ScrubbableNumberInput
                       id={fieldId('template-rows')}
                       min={1}
@@ -223,9 +219,8 @@ export default function LeftSidebar({
                         onTemplateGridChange({ ...templateGrid, rows: next })
                       }
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('template-cols')}>Columns</Label>
+                  </LabeledField>
+                  <LabeledField id={fieldId('template-cols')} label="Columns">
                     <ScrubbableNumberInput
                       id={fieldId('template-cols')}
                       min={1}
@@ -235,11 +230,12 @@ export default function LeftSidebar({
                         onTemplateGridChange({ ...templateGrid, cols: next })
                       }
                     />
-                  </div>
-                  <div className="space-y-1.5 col-span-2">
-                    <Label htmlFor={fieldId('template-gutter')}>
-                      Gutter ({paper.unit})
-                    </Label>
+                  </LabeledField>
+                  <LabeledField
+                    id={fieldId('template-gutter')}
+                    label={`Gutter (${paper.unit})`}
+                    className="col-span-2"
+                  >
                     <ScrubbableNumberInput
                       id={fieldId('template-gutter')}
                       min={0}
@@ -249,45 +245,31 @@ export default function LeftSidebar({
                         onTemplateGridChange({ ...templateGrid, gutter: next })
                       }
                     />
-                  </div>
+                  </LabeledField>
                 </div>
                 <div className="space-y-2">
-                  <ControlRow>
-                    <Label
-                      htmlFor={fieldId('template-show-gutter')}
-                      className="text-foreground"
-                    >
-                      Show gutter
-                    </Label>
-                    <Switch
-                      id={fieldId('template-show-gutter')}
-                      checked={templateGrid.showGutter}
-                      onCheckedChange={(checked) =>
-                        onTemplateGridChange({
-                          ...templateGrid,
-                          showGutter: checked,
-                        })
-                      }
-                    />
-                  </ControlRow>
-                  <ControlRow>
-                    <Label
-                      htmlFor={fieldId('template-gutter-obstacles')}
-                      className="text-foreground"
-                    >
-                      Gutter as obstacles
-                    </Label>
-                    <Switch
-                      id={fieldId('template-gutter-obstacles')}
-                      checked={templateGrid.gutterAsObstacles}
-                      onCheckedChange={(checked) =>
-                        onTemplateGridChange({
-                          ...templateGrid,
-                          gutterAsObstacles: checked,
-                        })
-                      }
-                    />
-                  </ControlRow>
+                  <SwitchControlRow
+                    id={fieldId('template-show-gutter')}
+                    label="Show gutter"
+                    checked={templateGrid.showGutter}
+                    onCheckedChange={(checked) =>
+                      onTemplateGridChange({
+                        ...templateGrid,
+                        showGutter: checked,
+                      })
+                    }
+                  />
+                  <SwitchControlRow
+                    id={fieldId('template-gutter-obstacles')}
+                    label="Gutter as obstacles"
+                    checked={templateGrid.gutterAsObstacles}
+                    onCheckedChange={(checked) =>
+                      onTemplateGridChange({
+                        ...templateGrid,
+                        gutterAsObstacles: checked,
+                      })
+                    }
+                  />
                 </div>
               </div>
 
@@ -309,18 +291,19 @@ export default function LeftSidebar({
                 {isSavedRunsModalOpen && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
                     <InsetPanel className="space-y-2">
-                      <Label htmlFor={fieldId('save-name')}>Name</Label>
-                      <Input
-                        id={fieldId('save-name')}
-                        value={saveName}
-                        onChange={(e) =>
-                          setSaveName(
-                            e.target.value.slice(0, MAX_SAVE_NAME_LENGTH),
-                          )
-                        }
-                        placeholder="New save name"
-                        className="bg-background"
-                      />
+                      <LabeledField id={fieldId('save-name')} label="Name">
+                        <Input
+                          id={fieldId('save-name')}
+                          value={saveName}
+                          onChange={(e) =>
+                            setSaveName(
+                              e.target.value.slice(0, MAX_SAVE_NAME_LENGTH),
+                            )
+                          }
+                          placeholder="New save name"
+                          className="bg-background"
+                        />
+                      </LabeledField>
                       <Button
                         variant="primary"
                         className="w-full"

@@ -2,7 +2,6 @@ import { useId, useMemo, useCallback } from 'react';
 import type { FrameConfig } from '../types/ui';
 import type { SimulationParams } from '../engine/simulationState';
 import { Button } from './ui/button';
-import { Label } from './ui/label';
 import {
   Select,
   SelectContent,
@@ -10,14 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Switch } from './ui/switch';
 import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
 import { ScrollArea } from './ui/scroll-area';
-import { ControlRow } from './ui/control-row';
 import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
 import { SectionHeading } from './ui/section-heading';
 import { InsetPanel } from './ui/inset-panel';
 import { ColorSwatchField } from './ui/color-swatch-field';
+import { SwitchControlRow } from './ui/switch-control-row';
+import { LabeledField } from './ui/labeled-field';
 import { Settings2, RefreshCw } from 'lucide-react';
 
 type RightSidebarProps = {
@@ -189,10 +188,10 @@ export default function RightSidebar({
             <SectionHeading>Simulation Parameters</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-influence-radius')}>
-                  Influence
-                </Label>
+              <LabeledField
+                id={fieldId('sim-influence-radius')}
+                label="Influence"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('sim-influence-radius')}
                   min={5}
@@ -208,9 +207,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-kill-radius')}>Kill Radius</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('sim-kill-radius')} label="Kill Radius">
                 <ScrubbableNumberInput
                   id={fieldId('sim-kill-radius')}
                   min={1}
@@ -226,9 +224,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-step-size')}>Step Size</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('sim-step-size')} label="Step Size">
                 <ScrubbableNumberInput
                   id={fieldId('sim-step-size')}
                   min={0.5}
@@ -244,9 +241,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-max-nodes')}>Max Nodes</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('sim-max-nodes')} label="Max Nodes">
                 <ScrubbableNumberInput
                   id={fieldId('sim-max-nodes')}
                   min={100}
@@ -262,9 +258,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-attractor-count')}>Targets</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('sim-attractor-count')} label="Targets">
                 <ScrubbableNumberInput
                   id={fieldId('sim-attractor-count')}
                   min={50}
@@ -280,9 +275,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('sim-steps-per-frame')}>Speed</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('sim-steps-per-frame')} label="Speed">
                 <ScrubbableNumberInput
                   id={fieldId('sim-steps-per-frame')}
                   min={1}
@@ -298,34 +292,26 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
+              </LabeledField>
             </div>
 
             <div className="space-y-2 pt-2">
-              <ControlRow>
-                <Label
-                  htmlFor={fieldId('sim-avoid-obstacles')}
-                  className="text-foreground"
-                >
-                  Avoid obstacles
-                </Label>
-                <Switch
-                  id={fieldId('sim-avoid-obstacles')}
-                  checked={mixedParams?.avoidObstacles ?? false}
-                  onCheckedChange={(checked) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, avoidObstacles: checked },
-                    }))
-                  }
-                />
-              </ControlRow>
+              <SwitchControlRow
+                id={fieldId('sim-avoid-obstacles')}
+                label="Avoid obstacles"
+                checked={mixedParams?.avoidObstacles ?? false}
+                onCheckedChange={(checked) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, avoidObstacles: checked },
+                  }))
+                }
+              />
             </div>
 
             <InsetPanel tone="subtle" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor={fieldId('sim-seed-count')}>Seed Count</Label>
+                <LabeledField id={fieldId('sim-seed-count')} label="Seed Count">
                   <ScrubbableNumberInput
                     id={fieldId('sim-seed-count')}
                     min={1}
@@ -341,9 +327,8 @@ export default function RightSidebar({
                       }))
                     }
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={fieldId('sim-seed-spread')}>Spread %</Label>
+                </LabeledField>
+                <LabeledField id={fieldId('sim-seed-spread')} label="Spread %">
                   <ScrubbableNumberInput
                     id={fieldId('sim-seed-spread')}
                     min={0}
@@ -360,11 +345,12 @@ export default function RightSidebar({
                       }))
                     }
                   />
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label htmlFor={fieldId('sim-seed-placement')}>
-                    Placement
-                  </Label>
+                </LabeledField>
+                <LabeledField
+                  id={fieldId('sim-seed-placement')}
+                  label="Placement"
+                  className="col-span-2"
+                >
                   <Select
                     value={mixedParams?.seedPlacement ?? undefined}
                     onValueChange={(value) =>
@@ -390,12 +376,11 @@ export default function RightSidebar({
                       <SelectItem value="scatter">Scatter</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </LabeledField>
               </div>
               {mixedParams?.seedPlacement === 'edge' && (
                 <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('sim-seed-edge')}>Edge</Label>
+                  <LabeledField id={fieldId('sim-seed-edge')} label="Edge">
                     <Select
                       value={mixedParams?.seedEdge ?? undefined}
                       onValueChange={(value) =>
@@ -422,9 +407,8 @@ export default function RightSidebar({
                         <SelectItem value="right">Right</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={fieldId('sim-seed-angle')}>Angle °</Label>
+                  </LabeledField>
+                  <LabeledField id={fieldId('sim-seed-angle')} label="Angle °">
                     <ScrubbableNumberInput
                       id={fieldId('sim-seed-angle')}
                       min={-180}
@@ -441,36 +425,30 @@ export default function RightSidebar({
                         }))
                       }
                     />
-                  </div>
+                  </LabeledField>
                 </div>
               )}
             </InsetPanel>
 
             <InsetPanel tone="subtle" className="space-y-3">
-              <ControlRow
-                tone="default"
-                className="px-0 py-0 bg-transparent border-none hover:bg-transparent"
-              >
-                <Label
-                  htmlFor={fieldId('sim-randomize-seed')}
-                  className="text-foreground"
-                >
-                  Randomize Seed
-                </Label>
-                <Switch
-                  id={fieldId('sim-randomize-seed')}
-                  checked={mixedSeed?.randomizeSeed ?? false}
-                  onCheckedChange={(checked) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      randomizeSeed: checked,
-                    }))
-                  }
-                />
-              </ControlRow>
+              <SwitchControlRow
+                id={fieldId('sim-randomize-seed')}
+                label="Randomize Seed"
+                checked={mixedSeed?.randomizeSeed ?? false}
+                onCheckedChange={(checked) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    randomizeSeed: checked,
+                  }))
+                }
+                rowClassName="px-0 py-0 bg-transparent border-none hover:bg-transparent"
+              />
               <div className="flex items-center gap-2">
-                <div className="flex-1 space-y-1.5">
-                  <Label htmlFor={fieldId('sim-seed')}>Seed Value</Label>
+                <LabeledField
+                  id={fieldId('sim-seed')}
+                  label="Seed Value"
+                  className="flex-1"
+                >
                   <ScrubbableNumberInput
                     id={fieldId('sim-seed')}
                     min={0}
@@ -488,7 +466,7 @@ export default function RightSidebar({
                       mixedSeed?.randomizeSeed === true ? 'opacity-50' : ''
                     }
                   />
-                </div>
+                </LabeledField>
               </div>
             </InsetPanel>
           </div>
@@ -508,8 +486,7 @@ export default function RightSidebar({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-count')}>Count</Label>
+              <LabeledField id={fieldId('obs-count')} label="Count">
                 <ScrubbableNumberInput
                   id={fieldId('obs-count')}
                   min={0}
@@ -528,9 +505,11 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-margin')}>Margin ({unit})</Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('obs-margin')}
+                label={`Margin (${unit})`}
+              >
                 <ScrubbableNumberInput
                   id={fieldId('obs-margin')}
                   min={0}
@@ -549,11 +528,11 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-min-vertices')}>
-                  Min Vertices
-                </Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('obs-min-vertices')}
+                label="Min Vertices"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('obs-min-vertices')}
                   min={3}
@@ -572,11 +551,11 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-max-vertices')}>
-                  Max Vertices
-                </Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('obs-max-vertices')}
+                label="Max Vertices"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('obs-max-vertices')}
                   min={3}
@@ -595,11 +574,11 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-min-radius')}>
-                  Min Radius ({unit})
-                </Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('obs-min-radius')}
+                label={`Min Radius (${unit})`}
+              >
                 <ScrubbableNumberInput
                   id={fieldId('obs-min-radius')}
                   min={0.1}
@@ -618,11 +597,11 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('obs-max-radius')}>
-                  Max Radius ({unit})
-                </Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('obs-max-radius')}
+                label={`Max Radius (${unit})`}
+              >
                 <ScrubbableNumberInput
                   id={fieldId('obs-max-radius')}
                   min={0.2}
@@ -641,7 +620,7 @@ export default function RightSidebar({
                     )
                   }
                 />
-              </div>
+              </LabeledField>
             </div>
           </div>
 
@@ -649,10 +628,10 @@ export default function RightSidebar({
             <SectionHeading>Appearance</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('render-stroke-width')}>
-                  Stroke Width
-                </Label>
+              <LabeledField
+                id={fieldId('render-stroke-width')}
+                label="Stroke Width"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('render-stroke-width')}
                   min={0.5}
@@ -673,11 +652,11 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('render-node-radius')}>
-                  Node Radius
-                </Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('render-node-radius')}
+                label="Node Radius"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('render-node-radius')}
                   min={0.5}
@@ -695,7 +674,7 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
+              </LabeledField>
               <ColorSwatchField
                 id={fieldId('render-root-color')}
                 label="Root Color"
@@ -738,69 +717,48 @@ export default function RightSidebar({
             </div>
 
             <div className="space-y-2 pt-2">
-              <ControlRow>
-                <Label
-                  htmlFor={fieldId('render-show-obstacles')}
-                  className="text-foreground"
-                >
-                  Show Obstacles
-                </Label>
-                <Switch
-                  id={fieldId('render-show-obstacles')}
-                  checked={mixedRenderSettings?.showObstacles ?? false}
-                  onCheckedChange={(checked) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      renderSettings: {
-                        ...f.renderSettings,
-                        showObstacles: checked,
-                      },
-                    }))
-                  }
-                />
-              </ControlRow>
-              <ControlRow>
-                <Label
-                  htmlFor={fieldId('render-show-attractors')}
-                  className="text-foreground"
-                >
-                  Show Targets
-                </Label>
-                <Switch
-                  id={fieldId('render-show-attractors')}
-                  checked={mixedRenderSettings?.showAttractors ?? false}
-                  onCheckedChange={(checked) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      renderSettings: {
-                        ...f.renderSettings,
-                        showAttractors: checked,
-                      },
-                    }))
-                  }
-                />
-              </ControlRow>
-              <ControlRow>
-                <Label
-                  htmlFor={fieldId('render-show-nodes')}
-                  className="text-foreground"
-                >
-                  Show Nodes
-                </Label>
-                <Switch
-                  id={fieldId('render-show-nodes')}
-                  checked={mixedRenderSettings?.showNodes ?? false}
-                  onCheckedChange={(checked) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      renderSettings: {
-                        ...f.renderSettings,
-                        showNodes: checked,
-                      },
-                    }))
-                  }
-                />
-              </ControlRow>
+              <SwitchControlRow
+                id={fieldId('render-show-obstacles')}
+                label="Show Obstacles"
+                checked={mixedRenderSettings?.showObstacles ?? false}
+                onCheckedChange={(checked) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      showObstacles: checked,
+                    },
+                  }))
+                }
+              />
+              <SwitchControlRow
+                id={fieldId('render-show-attractors')}
+                label="Show Targets"
+                checked={mixedRenderSettings?.showAttractors ?? false}
+                onCheckedChange={(checked) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      showAttractors: checked,
+                    },
+                  }))
+                }
+              />
+              <SwitchControlRow
+                id={fieldId('render-show-nodes')}
+                label="Show Nodes"
+                checked={mixedRenderSettings?.showNodes ?? false}
+                onCheckedChange={(checked) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      showNodes: checked,
+                    },
+                  }))
+                }
+              />
             </div>
           </div>
 
@@ -808,8 +766,7 @@ export default function RightSidebar({
             <SectionHeading>Export Settings</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('export-fps')}>FPS</Label>
+              <LabeledField id={fieldId('export-fps')} label="FPS">
                 <ScrubbableNumberInput
                   id={fieldId('export-fps')}
                   min={1}
@@ -825,9 +782,8 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={fieldId('export-steps')}>Steps/Frame</Label>
+              </LabeledField>
+              <LabeledField id={fieldId('export-steps')} label="Steps/Frame">
                 <ScrubbableNumberInput
                   id={fieldId('export-steps')}
                   min={1}
@@ -848,9 +804,12 @@ export default function RightSidebar({
                     }))
                   }
                 />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label htmlFor={fieldId('export-duration')}>Duration (s)</Label>
+              </LabeledField>
+              <LabeledField
+                id={fieldId('export-duration')}
+                label="Duration (s)"
+                className="col-span-2"
+              >
                 <ScrubbableNumberInput
                   id={fieldId('export-duration')}
                   min={1}
@@ -877,30 +836,23 @@ export default function RightSidebar({
                       : ''
                   }
                 />
-              </div>
+              </LabeledField>
             </div>
 
-            <ControlRow>
-              <Label
-                htmlFor={fieldId('export-auto')}
-                className="text-foreground"
-              >
-                Auto duration
-              </Label>
-              <Switch
-                id={fieldId('export-auto')}
-                checked={mixedExportSettings?.durationMode === 'auto'}
-                onCheckedChange={(checked) =>
-                  onUpdateSelectedFrames((f) => ({
-                    ...f,
-                    exportSettings: {
-                      ...f.exportSettings,
-                      durationMode: checked ? 'auto' : 'fixed',
-                    },
-                  }))
-                }
-              />
-            </ControlRow>
+            <SwitchControlRow
+              id={fieldId('export-auto')}
+              label="Auto duration"
+              checked={mixedExportSettings?.durationMode === 'auto'}
+              onCheckedChange={(checked) =>
+                onUpdateSelectedFrames((f) => ({
+                  ...f,
+                  exportSettings: {
+                    ...f.exportSettings,
+                    durationMode: checked ? 'auto' : 'fixed',
+                  },
+                }))
+              }
+            />
           </div>
         </div>
       </ScrollArea>

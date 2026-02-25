@@ -23,6 +23,7 @@
     --app-text: oklch(var(--muted));
     --app-text-strong: oklch(var(--foreground));
     --app-accent-grid: oklch(0.25 0.01 250 / 0.3);
+    --sidebar-width: 280px;
   }
 
   body {
