@@ -23,6 +23,8 @@ type DragData = {
   index: number
 }
 
+const MAX_FRAME_NAME_LENGTH = 120
+
 export default function LayersPanel({
   frames,
   templateGrid,
@@ -175,15 +177,19 @@ function FrameLayerRow({
     return `${baseName} (R${row + 1}, C${col + 1})`
   }, [columnCount, frameName, index])
 
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+  const applySelection = (modifiers: {
+    shiftKey: boolean
+    metaKey: boolean
+    ctrlKey: boolean
+  }) => {
     if (isEditing) return
-    if (event.shiftKey) {
+    if (modifiers.shiftKey) {
       onSelectFrameRange(anchorIndex ?? index, index)
       onUpdateAnchor(index)
       return
     }
 
-    if (event.metaKey || event.ctrlKey) {
+    if (modifiers.metaKey || modifiers.ctrlKey) {
       onToggleFrame(index)
       onUpdateAnchor(index)
       return
@@ -193,8 +199,17 @@ function FrameLayerRow({
     onUpdateAnchor(index)
   }
 
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    applySelection(event)
+  }
+
+  const normalizeFrameName = (value: string) => {
+    const nextName = value.trim() || frameName.trim() || `Frame ${index + 1}`
+    return nextName.slice(0, MAX_FRAME_NAME_LENGTH)
+  }
+
   const commitName = () => {
-    const nextName = draftName.trim() || frameName.trim() || `Frame ${index + 1}`
+    const nextName = normalizeFrameName(draftName)
     setDraftName(nextName)
     setIsEditing(false)
     if (nextName !== frameName) {
@@ -211,8 +226,24 @@ function FrameLayerRow({
     <div
       ref={rowRef}
       onClick={handleClick}
+      role="button"
+      tabIndex={isEditing ? -1 : 0}
+      aria-pressed={isSelected}
+      aria-label={label}
+      onKeyDown={(event) => {
+        if (isEditing) return
+        if (event.key === 'F2') {
+          event.preventDefault()
+          setIsEditing(true)
+          return
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          applySelection(event)
+        }
+      }}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition',
+        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500',
         isSelected
           ? 'border-blue-500/70 bg-blue-500/10 text-blue-200'
           : 'border-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900',
@@ -220,14 +251,18 @@ function FrameLayerRow({
         isDragging ? 'opacity-70' : null
       )}
     >
-      <GripVertical className="h-3.5 w-3.5 text-zinc-500" />
+      <GripVertical className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
       {isEditing ? (
         <input
           ref={inputRef}
           className="flex-1 rounded-sm border border-zinc-700 bg-zinc-950 px-1 py-0.5 text-[11px] text-zinc-100 outline-none"
           value={draftName}
-          onChange={(event) => setDraftName(event.target.value)}
+          onChange={(event) =>
+            setDraftName(event.target.value.slice(0, MAX_FRAME_NAME_LENGTH))
+          }
           onBlur={commitName}
+          maxLength={MAX_FRAME_NAME_LENGTH}
+          aria-label={`Rename ${label}`}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
@@ -242,7 +277,8 @@ function FrameLayerRow({
         />
       ) : (
         <span
-          className="flex-1"
+          className="min-w-0 flex-1 truncate"
+          title={label}
           onDoubleClick={(event) => {
             event.stopPropagation()
             setIsEditing(true)

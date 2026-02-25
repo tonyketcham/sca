@@ -1,6 +1,6 @@
 import type { SimulationParams } from '../engine/simulationState';
 import type { Unit } from '../geometry/units';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type {
   PaperSettings,
   StatsSummary,
@@ -50,6 +50,9 @@ type ControlsPanelProps = {
   onExportPng: () => void;
   onExportSvg: () => void;
   onExportMp4: () => void;
+  exportError: string | null;
+  isExportingMp4: boolean;
+  onDismissExportError: () => void;
   onSaveEntry: (name?: string) => void;
   onLoadEntry: (id: string) => void;
   onDeleteEntry: (id: string) => void;
@@ -65,6 +68,16 @@ type SectionKey =
   | 'rendering'
   | 'export'
   | 'saved';
+
+const MAX_SAVE_NAME_LENGTH = 120;
+const FOCUSABLE_SELECTOR = [
+  'button:not([disabled])',
+  '[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
 
 export default function ControlsPanel({
   paper,
@@ -89,6 +102,9 @@ export default function ControlsPanel({
   onExportPng,
   onExportSvg,
   onExportMp4,
+  exportError,
+  isExportingMp4,
+  onDismissExportError,
   onSaveEntry,
   onLoadEntry,
   onDeleteEntry,
@@ -97,6 +113,11 @@ export default function ControlsPanel({
 }: ControlsPanelProps) {
   const [saveName, setSaveName] = useState('');
   const [isSavedRunsModalOpen, setIsSavedRunsModalOpen] = useState(false);
+  const [previewedEntryId, setPreviewedEntryId] = useState<string | null>(null);
+  const savedRunsTitleId = useId();
+  const savedRunsDescriptionId = useId();
+  const saveNameInputId = useId();
+  const modalRef = useRef<HTMLDivElement | null>(null);
   const defaultSections: Record<SectionKey, boolean> = {
     simulation: true,
     template: true,
@@ -116,8 +137,17 @@ export default function ControlsPanel({
     () => selectedFrameIndices.map((index) => frames[index]).filter(Boolean),
     [frames, selectedFrameIndices],
   );
+  const formattedSavedEntryCount = useMemo(
+    () => new Intl.NumberFormat().format(savedEntries.length),
+    [savedEntries.length],
+  );
   const hasFrameSelection = selectedFrames.length > 0;
   const showProjectControls = !hasFrameSelection;
+  const controlsIdPrefix = useId();
+  const fieldId = useCallback(
+    (name: string): string => `${controlsIdPrefix}-${name}`,
+    [controlsIdPrefix],
+  );
 
   const getMixedValue = <T,>(values: T[]): T | null => {
     if (values.length === 0) return null;
@@ -253,6 +283,96 @@ export default function ControlsPanel({
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const normalizeSaveName = useCallback((raw: string): string | undefined => {
+    const next = raw.replace(/\s+/g, ' ').trim();
+    if (next.length === 0) return undefined;
+    return next.slice(0, MAX_SAVE_NAME_LENGTH);
+  }, []);
+
+  const startPreview = useCallback(
+    (entryId: string) => {
+      setPreviewedEntryId(entryId);
+      onPreviewEntry(entryId);
+    },
+    [onPreviewEntry],
+  );
+
+  const stopPreview = useCallback(() => {
+    setPreviewedEntryId(null);
+    onPreviewEnd();
+  }, [onPreviewEnd]);
+
+  const closeSavedRunsModal = useCallback(() => {
+    setIsSavedRunsModalOpen(false);
+    stopPreview();
+  }, [stopPreview]);
+
+  const handleSaveCurrent = useCallback(() => {
+    onSaveEntry(normalizeSaveName(saveName));
+    setSaveName('');
+  }, [normalizeSaveName, onSaveEntry, saveName]);
+
+  const handleDeleteEntry = useCallback(
+    (entry: SavedEntry) => {
+      const confirmed = window.confirm(`Delete saved run "${entry.name}"?`);
+      if (!confirmed) return;
+      if (previewedEntryId === entry.id) {
+        stopPreview();
+      }
+      onDeleteEntry(entry.id);
+    },
+    [onDeleteEntry, previewedEntryId, stopPreview],
+  );
+
+  useEffect(() => {
+    if (!isSavedRunsModalOpen) return;
+    const previousFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = modalRef.current;
+    const initialFocusTarget =
+      dialog?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR) ?? dialog;
+    initialFocusTarget?.focus();
+
+    const handleModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSavedRunsModal();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const activeDialog = modalRef.current;
+      if (!activeDialog) return;
+      const focusableElements = Array.from(
+        activeDialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        activeDialog.focus();
+        return;
+      }
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey) {
+        if (active === first || active === activeDialog) {
+          event.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+      if (active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleModalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleModalKeyDown);
+      previousFocusedElement?.focus();
+    };
+  }, [closeSavedRunsModal, isSavedRunsModalOpen]);
+
   const renderSectionHeader = (
     title: string,
     key: SectionKey,
@@ -288,10 +408,6 @@ export default function ControlsPanel({
       </button>
     );
   };
-  const closeSavedRunsModal = () => {
-    setIsSavedRunsModalOpen(false);
-    onPreviewEnd();
-  };
 
   return (
     <div className="relative flex h-full flex-col bg-zinc-950/30 text-[11px] text-zinc-300">
@@ -322,8 +438,11 @@ export default function ControlsPanel({
                   <div id="section-simulation" className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Influence radius</Label>
+                        <Label htmlFor={fieldId('sim-influence-radius')}>
+                          Influence radius
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-influence-radius')}
                           min={5}
                           integer
                           value={mixedParams?.influenceRadius ?? null}
@@ -344,8 +463,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Kill radius</Label>
+                        <Label htmlFor={fieldId('sim-kill-radius')}>Kill radius</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-kill-radius')}
                           min={1}
                           integer
                           value={mixedParams?.killRadius ?? null}
@@ -363,8 +483,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Step size</Label>
+                        <Label htmlFor={fieldId('sim-step-size')}>Step size</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-step-size')}
                           min={0.5}
                           step={0.5}
                           value={mixedParams?.stepSize ?? null}
@@ -380,8 +501,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Max nodes</Label>
+                        <Label htmlFor={fieldId('sim-max-nodes')}>Max nodes</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-max-nodes')}
                           min={100}
                           integer
                           value={mixedParams?.maxNodes ?? null}
@@ -397,8 +519,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Attractor count</Label>
+                        <Label htmlFor={fieldId('sim-attractor-count')}>
+                          Attractor count
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-attractor-count')}
                           min={50}
                           integer
                           value={mixedParams?.attractorCount ?? null}
@@ -416,8 +541,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Steps per frame</Label>
+                        <Label htmlFor={fieldId('sim-steps-per-frame')}>
+                          Steps per frame
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-steps-per-frame')}
                           min={1}
                           integer
                           value={mixedParams?.stepsPerFrame ?? null}
@@ -435,8 +563,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Seed count</Label>
+                        <Label htmlFor={fieldId('sim-seed-count')}>
+                          Seed count
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-seed-count')}
                           min={1}
                           integer
                           value={mixedParams?.seedCount ?? null}
@@ -454,8 +585,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Seed spread (%)</Label>
+                        <Label htmlFor={fieldId('sim-seed-spread')}>
+                          Seed spread (%)
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-seed-spread')}
                           min={0}
                           max={100}
                           integer
@@ -474,7 +608,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Seed placement</Label>
+                        <Label htmlFor={fieldId('sim-seed-placement')}>
+                          Seed placement
+                        </Label>
                         <Select
                           value={mixedParams?.seedPlacement ?? undefined}
                           onValueChange={(value) =>
@@ -488,7 +624,7 @@ export default function ControlsPanel({
                             }))
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id={fieldId('sim-seed-placement')}>
                             <SelectValue
                               placeholder={
                                 mixedParams?.seedPlacement ? undefined : 'Mixed'
@@ -504,7 +640,9 @@ export default function ControlsPanel({
                       {mixedParams?.seedPlacement === 'edge' ? (
                         <>
                           <div className="space-y-1">
-                            <Label>Seed edge</Label>
+                            <Label htmlFor={fieldId('sim-seed-edge')}>
+                              Seed edge
+                            </Label>
                             <Select
                               value={mixedParams?.seedEdge ?? undefined}
                               onValueChange={(value) =>
@@ -518,7 +656,7 @@ export default function ControlsPanel({
                                 }))
                               }
                             >
-                              <SelectTrigger>
+                              <SelectTrigger id={fieldId('sim-seed-edge')}>
                                 <SelectValue
                                   placeholder={
                                     mixedParams?.seedEdge ? undefined : 'Mixed'
@@ -534,8 +672,11 @@ export default function ControlsPanel({
                             </Select>
                           </div>
                           <div className="space-y-1">
-                            <Label>Seed angle (deg)</Label>
+                            <Label htmlFor={fieldId('sim-seed-angle')}>
+                              Seed angle (deg)
+                            </Label>
                             <ScrubbableNumberInput
+                              id={fieldId('sim-seed-angle')}
                               min={-180}
                               max={180}
                               step={1}
@@ -559,7 +700,10 @@ export default function ControlsPanel({
                     </div>
                     <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
-                        <Label className="text-[11px] text-zinc-200">
+                        <Label
+                          htmlFor={fieldId('sim-avoid-obstacles')}
+                          className="text-[11px] text-zinc-200"
+                        >
                           Avoid obstacles
                         </Label>
                         <div className="text-[10px] text-zinc-500">
@@ -569,6 +713,7 @@ export default function ControlsPanel({
                         </div>
                       </div>
                       <Switch
+                        id={fieldId('sim-avoid-obstacles')}
                         checked={mixedParams?.avoidObstacles ?? false}
                         onCheckedChange={(checked) =>
                           onUpdateSelectedFrames((frame) => ({
@@ -602,7 +747,10 @@ export default function ControlsPanel({
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
-                          <Label className="text-[11px] text-zinc-200">
+                          <Label
+                            htmlFor={fieldId('sim-randomize-seed')}
+                            className="text-[11px] text-zinc-200"
+                          >
                             Randomize seed
                           </Label>
                           <div className="text-[10px] text-zinc-500">
@@ -612,6 +760,7 @@ export default function ControlsPanel({
                           </div>
                         </div>
                         <Switch
+                          id={fieldId('sim-randomize-seed')}
                           checked={mixedSeed?.randomizeSeed ?? false}
                           onCheckedChange={(checked) =>
                             onUpdateSelectedFrames((frame) => ({
@@ -622,8 +771,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Seed</Label>
+                        <Label htmlFor={fieldId('sim-seed')}>Seed</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('sim-seed')}
                           min={0}
                           integer
                           value={mixedSeed?.seed ?? null}
@@ -668,8 +818,9 @@ export default function ControlsPanel({
                   <div id="section-template" className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Rows</Label>
+                        <Label htmlFor={fieldId('template-rows')}>Rows</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('template-rows')}
                           min={1}
                           integer
                           value={templateGrid.rows}
@@ -682,8 +833,9 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Columns</Label>
+                        <Label htmlFor={fieldId('template-cols')}>Columns</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('template-cols')}
                           min={1}
                           integer
                           value={templateGrid.cols}
@@ -696,8 +848,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Gutter ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('template-gutter')}>
+                          Gutter ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('template-gutter')}
                           min={0}
                           step={0.1}
                           value={templateGrid.gutter}
@@ -713,7 +868,10 @@ export default function ControlsPanel({
                     <div className="grid gap-2">
                       <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
-                          <Label className="text-[11px] text-zinc-200">
+                          <Label
+                            htmlFor={fieldId('template-show-gutter')}
+                            className="text-[11px] text-zinc-200"
+                          >
                             Show gutter
                           </Label>
                           <div className="text-[10px] text-zinc-500">
@@ -721,6 +879,7 @@ export default function ControlsPanel({
                           </div>
                         </div>
                         <Switch
+                          id={fieldId('template-show-gutter')}
                           checked={templateGrid.showGutter}
                           onCheckedChange={(checked) =>
                             onTemplateGridChange({
@@ -732,7 +891,10 @@ export default function ControlsPanel({
                       </div>
                       <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
-                          <Label className="text-[11px] text-zinc-200">
+                          <Label
+                            htmlFor={fieldId('template-gutter-obstacles')}
+                            className="text-[11px] text-zinc-200"
+                          >
                             Gutter as obstacles
                           </Label>
                           <div className="text-[10px] text-zinc-500">
@@ -740,6 +902,7 @@ export default function ControlsPanel({
                           </div>
                         </div>
                         <Switch
+                          id={fieldId('template-gutter-obstacles')}
                           checked={templateGrid.gutterAsObstacles}
                           onCheckedChange={(checked) =>
                             onTemplateGridChange({
@@ -762,8 +925,11 @@ export default function ControlsPanel({
                   <div id="section-paper" className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Width ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('paper-width')}>
+                          Width ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('paper-width')}
                           min={1}
                           value={paper.width}
                           onValueChange={(next) =>
@@ -772,8 +938,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Height ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('paper-height')}>
+                          Height ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('paper-height')}
                           min={1}
                           value={paper.height}
                           onValueChange={(next) =>
@@ -782,14 +951,14 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Units</Label>
+                        <Label htmlFor={fieldId('paper-unit')}>Units</Label>
                         <Select
                           value={paper.unit}
                           onValueChange={(value) =>
                             onPaperChange({ ...paper, unit: value as Unit })
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger id={fieldId('paper-unit')}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -800,8 +969,9 @@ export default function ControlsPanel({
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label>DPI</Label>
+                        <Label htmlFor={fieldId('paper-dpi')}>DPI</Label>
                         <ScrubbableNumberInput
+                          id={fieldId('paper-dpi')}
                           min={36}
                           integer
                           value={paper.dpi}
@@ -826,8 +996,11 @@ export default function ControlsPanel({
                   <div id="section-obstacles" className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Polygon count</Label>
+                        <Label htmlFor={fieldId('obs-count')}>
+                          Polygon count
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-count')}
                           min={0}
                           integer
                           value={mixedObstacles?.count ?? null}
@@ -846,8 +1019,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Vertices (min)</Label>
+                        <Label htmlFor={fieldId('obs-min-vertices')}>
+                          Vertices (min)
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-min-vertices')}
                           min={3}
                           integer
                           value={mixedObstacles?.minVertices ?? null}
@@ -871,8 +1047,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Vertices (max)</Label>
+                        <Label htmlFor={fieldId('obs-max-vertices')}>
+                          Vertices (max)
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-max-vertices')}
                           min={3}
                           integer
                           value={mixedObstacles?.maxVertices ?? null}
@@ -896,8 +1075,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Min radius ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('obs-min-radius')}>
+                          Min radius ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-min-radius')}
                           min={0.1}
                           step={0.1}
                           value={mixedObstacles?.minRadius ?? null}
@@ -921,8 +1103,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Max radius ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('obs-max-radius')}>
+                          Max radius ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-max-radius')}
                           min={0.2}
                           step={0.1}
                           value={mixedObstacles?.maxRadius ?? null}
@@ -946,8 +1131,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Margin ({paper.unit})</Label>
+                        <Label htmlFor={fieldId('obs-margin')}>
+                          Margin ({paper.unit})
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('obs-margin')}
                           min={0}
                           step={0.1}
                           value={mixedObstacles?.margin ?? null}
@@ -988,8 +1176,11 @@ export default function ControlsPanel({
                   <div id="section-rendering" className="space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Stroke width</Label>
+                        <Label htmlFor={fieldId('render-stroke-width')}>
+                          Stroke width
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('render-stroke-width')}
                           min={0.5}
                           step={0.5}
                           value={mixedRenderSettings?.strokeWidth ?? null}
@@ -1010,8 +1201,11 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Node radius</Label>
+                        <Label htmlFor={fieldId('render-node-radius')}>
+                          Node radius
+                        </Label>
                         <ScrubbableNumberInput
+                          id={fieldId('render-node-radius')}
                           min={0.5}
                           step={0.5}
                           value={mixedRenderSettings?.nodeRadius ?? null}
@@ -1034,13 +1228,17 @@ export default function ControlsPanel({
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label>Root color</Label>
+                        <Label htmlFor={fieldId('render-root-color')}>
+                          Root color
+                        </Label>
                         {mixedRenderSettings?.rootColor === null ? (
                           <div className="text-[10px] text-zinc-500">Mixed</div>
                         ) : null}
                         <Input
+                          id={fieldId('render-root-color')}
                           type="color"
                           value={mixedRenderSettings?.rootColor ?? '#000000'}
+                          aria-label="Root color"
                           onChange={(event) =>
                             onUpdateSelectedFrames((frame) => ({
                               ...frame,
@@ -1053,13 +1251,17 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Obstacle color</Label>
+                        <Label htmlFor={fieldId('render-obstacle-color')}>
+                          Obstacle color
+                        </Label>
                         {mixedRenderSettings?.obstacleFill === null ? (
                           <div className="text-[10px] text-zinc-500">Mixed</div>
                         ) : null}
                         <Input
+                          id={fieldId('render-obstacle-color')}
                           type="color"
                           value={mixedRenderSettings?.obstacleFill ?? '#000000'}
+                          aria-label="Obstacle color"
                           onChange={(event) =>
                             onUpdateSelectedFrames((frame) => ({
                               ...frame,
@@ -1072,15 +1274,19 @@ export default function ControlsPanel({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label>Attractor color</Label>
+                        <Label htmlFor={fieldId('render-attractor-color')}>
+                          Attractor color
+                        </Label>
                         {mixedRenderSettings?.attractorColor === null ? (
                           <div className="text-[10px] text-zinc-500">Mixed</div>
                         ) : null}
                         <Input
+                          id={fieldId('render-attractor-color')}
                           type="color"
                           value={
                             mixedRenderSettings?.attractorColor ?? '#000000'
                           }
+                          aria-label="Attractor color"
                           onChange={(event) =>
                             onUpdateSelectedFrames((frame) => ({
                               ...frame,
@@ -1095,7 +1301,10 @@ export default function ControlsPanel({
                     </div>
                     <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
-                        <Label className="text-[11px] text-zinc-200">
+                        <Label
+                          htmlFor={fieldId('render-show-obstacles')}
+                          className="text-[11px] text-zinc-200"
+                        >
                           Show obstacles
                         </Label>
                         <div className="text-[10px] text-zinc-500">
@@ -1105,6 +1314,7 @@ export default function ControlsPanel({
                         </div>
                       </div>
                       <Switch
+                        id={fieldId('render-show-obstacles')}
                         checked={mixedRenderSettings?.showObstacles ?? false}
                         onCheckedChange={(checked) =>
                           onUpdateSelectedFrames((frame) => ({
@@ -1119,7 +1329,10 @@ export default function ControlsPanel({
                     </div>
                     <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
-                        <Label className="text-[11px] text-zinc-200">
+                        <Label
+                          htmlFor={fieldId('render-show-attractors')}
+                          className="text-[11px] text-zinc-200"
+                        >
                           Show attractors
                         </Label>
                         <div className="text-[10px] text-zinc-500">
@@ -1129,6 +1342,7 @@ export default function ControlsPanel({
                         </div>
                       </div>
                       <Switch
+                        id={fieldId('render-show-attractors')}
                         checked={mixedRenderSettings?.showAttractors ?? false}
                         onCheckedChange={(checked) =>
                           onUpdateSelectedFrames((frame) => ({
@@ -1143,7 +1357,10 @@ export default function ControlsPanel({
                     </div>
                     <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                       <div>
-                        <Label className="text-[11px] text-zinc-200">
+                        <Label
+                          htmlFor={fieldId('render-show-nodes')}
+                          className="text-[11px] text-zinc-200"
+                        >
                           Show nodes
                         </Label>
                         <div className="text-[10px] text-zinc-500">
@@ -1153,6 +1370,7 @@ export default function ControlsPanel({
                         </div>
                       </div>
                       <Switch
+                        id={fieldId('render-show-nodes')}
                         checked={mixedRenderSettings?.showNodes ?? false}
                         onCheckedChange={(checked) =>
                           onUpdateSelectedFrames((frame) => ({
@@ -1178,8 +1396,9 @@ export default function ControlsPanel({
                     <>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <Label>MP4 FPS</Label>
+                          <Label htmlFor={fieldId('export-fps')}>MP4 FPS</Label>
                           <ScrubbableNumberInput
+                            id={fieldId('export-fps')}
                             min={1}
                             integer
                             value={mixedExportSettings?.fps ?? null}
@@ -1200,8 +1419,11 @@ export default function ControlsPanel({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label>MP4 Duration (s)</Label>
+                          <Label htmlFor={fieldId('export-duration')}>
+                            MP4 Duration (s)
+                          </Label>
                           <ScrubbableNumberInput
+                            id={fieldId('export-duration')}
                             min={1}
                             integer
                             value={
@@ -1232,8 +1454,11 @@ export default function ControlsPanel({
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label>MP4 Steps/frame</Label>
+                          <Label htmlFor={fieldId('export-steps-per-frame')}>
+                            MP4 Steps/frame
+                          </Label>
                           <ScrubbableNumberInput
+                            id={fieldId('export-steps-per-frame')}
                             min={1}
                             integer
                             value={
@@ -1258,7 +1483,10 @@ export default function ControlsPanel({
                       </div>
                       <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
                         <div>
-                          <Label className="text-[11px] text-zinc-200">
+                          <Label
+                            htmlFor={fieldId('export-auto-duration')}
+                            className="text-[11px] text-zinc-200"
+                          >
                             Auto duration
                           </Label>
                           <div className="text-[10px] text-zinc-500">
@@ -1268,6 +1496,7 @@ export default function ControlsPanel({
                           </div>
                         </div>
                         <Switch
+                          id={fieldId('export-auto-duration')}
                           checked={
                             mixedExportSettings?.durationMode === 'auto'
                           }
@@ -1289,6 +1518,22 @@ export default function ControlsPanel({
                       ? `Exports ${selectedFrames.length === 1 ? 'selected frame' : `${selectedFrames.length} selected frames`}`
                       : 'Exports entire project'}
                   </div>
+                  {exportError ? (
+                    <div
+                      role="alert"
+                      className="flex items-start justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-100"
+                    >
+                      <div className="min-w-0 flex-1 break-words">{exportError}</div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-[11px]"
+                        onClick={onDismissExportError}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={onExportPng}
@@ -1311,8 +1556,10 @@ export default function ControlsPanel({
                       variant="default"
                       size="sm"
                       className="h-7 px-2"
+                      disabled={isExportingMp4}
+                      aria-busy={isExportingMp4}
                     >
-                      Export MP4
+                      {isExportingMp4 ? 'Exporting MP4...' : 'Export MP4'}
                     </Button>
                   </div>
                 </div>
@@ -1334,7 +1581,7 @@ export default function ControlsPanel({
                       className="h-7 px-2 text-[11px]"
                       onClick={() => setIsSavedRunsModalOpen(true)}
                     >
-                      Open saved runs ({savedEntries.length})
+                      Open saved runs ({formattedSavedEntryCount})
                     </Button>
                   </div>
                 ) : null}
@@ -1352,14 +1599,26 @@ export default function ControlsPanel({
             closeSavedRunsModal();
           }}
         >
-          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-700 bg-zinc-950 shadow-2xl">
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={savedRunsTitleId}
+            aria-describedby={savedRunsDescriptionId}
+            tabIndex={-1}
+            className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-700 bg-zinc-950 shadow-2xl outline-none"
+          >
             <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
-              <div>
-                <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-100">
+              <div className="min-w-0">
+                <h2
+                  id={savedRunsTitleId}
+                  className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-100"
+                >
                   Saved Runs
                 </h2>
-                <p className="text-[10px] text-zinc-500">
-                  Hover entries to preview. Leave this popout to restore.
+                <p id={savedRunsDescriptionId} className="text-[10px] text-zinc-500">
+                  Preview entries with hover or keyboard focus. Press Escape to
+                  close.
                 </p>
               </div>
               <Button
@@ -1376,23 +1635,39 @@ export default function ControlsPanel({
               <ScrollArea className="h-full pr-2">
                 <div
                   className="space-y-3"
-                  onMouseLeave={onPreviewEnd}
+                  onMouseLeave={stopPreview}
+                  onBlurCapture={(event) => {
+                    if (
+                      !event.currentTarget.contains(
+                        event.relatedTarget as Node | null,
+                      )
+                    ) {
+                      stopPreview();
+                    }
+                  }}
                 >
                   <div className="space-y-2">
-                    <Label>Name</Label>
+                    <Label htmlFor={saveNameInputId}>Name</Label>
                     <Input
+                      id={saveNameInputId}
                       value={saveName}
-                      onChange={(event) => setSaveName(event.target.value)}
+                      onChange={(event) =>
+                        setSaveName(
+                          event.target.value.slice(0, MAX_SAVE_NAME_LENGTH),
+                        )
+                      }
                       placeholder="New save name"
+                      maxLength={MAX_SAVE_NAME_LENGTH}
                     />
+                    <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                      <span>Optional. Supports emoji and non-Latin text.</span>
+                      <span>{saveName.length}/{MAX_SAVE_NAME_LENGTH}</span>
+                    </div>
                     <Button
                       variant="secondary"
                       size="sm"
                       className="h-7 px-2 text-[11px]"
-                      onClick={() => {
-                        onSaveEntry(saveName);
-                        setSaveName('');
-                      }}
+                      onClick={handleSaveCurrent}
                     >
                       Save current
                     </Button>
@@ -1400,27 +1675,52 @@ export default function ControlsPanel({
 
                   <div className="space-y-2">
                     {savedEntries.length === 0 ? (
-                      <div className="text-[10px] text-zinc-500">
-                        No saved runs yet.
+                      <div className="rounded-md border border-zinc-800 bg-zinc-900/50 p-2 text-[10px] text-zinc-500">
+                        No saved runs yet. Save the current project state to
+                        create one.
                       </div>
                     ) : (
                       savedEntries.map((entry) => (
                         <div
                           key={entry.id}
-                          className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none"
-                          onMouseEnter={() => onPreviewEntry(entry.id)}
+                          className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 focus-within:border-zinc-600 focus-within:bg-zinc-900/50 motion-reduce:transition-none"
+                          onMouseEnter={() => startPreview(entry.id)}
+                          onFocusCapture={() => startPreview(entry.id)}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div>
-                              <div className="text-[12px] text-zinc-100">
+                            <div className="min-w-0 flex-1">
+                              <div
+                                className="truncate text-[12px] text-zinc-100"
+                                title={entry.name}
+                              >
                                 {entry.name}
                               </div>
-                              <div className="text-[10px] text-zinc-500">
+                              <div className="truncate text-[10px] text-zinc-500">
                                 Seed: {entry.seed}{' '}
                                 {entry.randomizeSeed ? '(random)' : '(fixed)'}
                               </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex shrink-0 flex-wrap gap-2">
+                              <Button
+                                variant={
+                                  previewedEntryId === entry.id
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                size="sm"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => {
+                                  if (previewedEntryId === entry.id) {
+                                    stopPreview();
+                                    return;
+                                  }
+                                  startPreview(entry.id);
+                                }}
+                              >
+                                {previewedEntryId === entry.id
+                                  ? 'Stop preview'
+                                  : 'Preview'}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1433,7 +1733,7 @@ export default function ControlsPanel({
                                 variant="secondary"
                                 size="sm"
                                 className="h-7 px-2 text-[11px]"
-                                onClick={() => onDeleteEntry(entry.id)}
+                                onClick={() => handleDeleteEntry(entry)}
                               >
                                 Delete
                               </Button>

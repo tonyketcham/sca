@@ -95,6 +95,7 @@ export default function CanvasView({
       isDraggingRef.current = false
       lastPointerRef.current = { x: event.clientX, y: event.clientY }
       canvas.setPointerCapture(event.pointerId)
+      canvas.focus()
     }
 
     const onPointerUp = (event: PointerEvent) => {
@@ -197,11 +198,52 @@ export default function CanvasView({
       applyZoom(pointer, nextZoom)
     }
 
+    const onKeyDown = (event: KeyboardEvent) => {
+      const panStep = event.shiftKey ? 96 : 48
+      const center = {
+        x: canvasSizeRef.current.width * 0.5,
+        y: canvasSizeRef.current.height * 0.5
+      }
+      let handled = true
+      switch (event.key) {
+        case 'ArrowLeft':
+          viewRef.current.pan.x += panStep
+          break
+        case 'ArrowRight':
+          viewRef.current.pan.x -= panStep
+          break
+        case 'ArrowUp':
+          viewRef.current.pan.y += panStep
+          break
+        case 'ArrowDown':
+          viewRef.current.pan.y -= panStep
+          break
+        case '=':
+        case '+':
+          applyZoom(center, clamp(viewRef.current.zoom * 1.1, MIN_ZOOM, MAX_ZOOM))
+          break
+        case '-':
+        case '_':
+          applyZoom(center, clamp(viewRef.current.zoom * 0.9, MIN_ZOOM, MAX_ZOOM))
+          break
+        case '0':
+          viewRef.current.pan = { x: 0, y: 0 }
+          viewRef.current.zoom = 1
+          break
+        default:
+          handled = false
+      }
+      if (handled) {
+        event.preventDefault()
+      }
+    }
+
     canvas.addEventListener('pointerdown', onPointerDown)
     canvas.addEventListener('pointerup', onPointerUp)
     canvas.addEventListener('pointerleave', onPointerLeave)
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('wheel', onWheel, { passive: false })
+    canvas.addEventListener('keydown', onKeyDown)
 
     return () => {
       canvas.removeEventListener('pointerdown', onPointerDown)
@@ -209,6 +251,7 @@ export default function CanvasView({
       canvas.removeEventListener('pointerleave', onPointerLeave)
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('wheel', onWheel)
+      canvas.removeEventListener('keydown', onKeyDown)
     }
   }, [canvasRef, gridLayout, onClearSelection, onSelectFrame, onToggleFrame, simulationRef])
 
@@ -266,6 +309,7 @@ export default function CanvasView({
       <div className="pointer-events-none absolute bottom-4 right-4 text-xs text-zinc-500">
         <div>Drag to pan</div>
         <div>Pinch or scroll to zoom</div>
+        <div>Arrow keys pan, +/- zoom</div>
       </div>
     ),
     []
@@ -273,7 +317,12 @@ export default function CanvasView({
 
   return (
     <div className="relative h-full w-full" ref={containerRef}>
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      <canvas
+        ref={canvasRef}
+        className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+        tabIndex={0}
+        aria-label="Simulation canvas. Drag to pan, scroll to zoom, use arrow keys to pan, plus and minus to zoom, and zero to reset view."
+      />
       {viewHints}
     </div>
   )

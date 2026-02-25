@@ -118,6 +118,8 @@ export default function App() {
   ]);
   const [selectedFrameIndices, setSelectedFrameIndices] = useState<number[]>([0]);
   const [running, setRunning] = useState(true);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isExportingMp4, setIsExportingMp4] = useState(false);
   const [stats, setStats] = useState<StatsSummary>({
     nodes: 0,
     attractors: 0,
@@ -437,6 +439,7 @@ export default function App() {
   }, [getExportScope]);
 
   const handleExportPng = useCallback(() => {
+    setExportError(null);
     const canvas = exportCanvas();
     if (!canvas) return;
     canvas.toBlob((blob) => {
@@ -446,6 +449,7 @@ export default function App() {
   }, [exportCanvas]);
 
   const handleExportSvg = useCallback(() => {
+    setExportError(null);
     const scope = getExportScope();
     const svg = exportCompositeSvg({
       states: scope.states,
@@ -460,7 +464,10 @@ export default function App() {
   }, [getExportScope, paper.unit]);
 
   const handleExportMp4 = useCallback(async () => {
+    if (isExportingMp4) return;
     try {
+      setExportError(null);
+      setIsExportingMp4(true);
       const scope = getExportScope();
       const activeFrame = scope.frames[0];
       if (!activeFrame) return;
@@ -476,9 +483,15 @@ export default function App() {
       downloadBlob(blob, `root-growth-${Date.now()}.mp4`);
     } catch (error) {
       console.error(error);
-      alert(error instanceof Error ? error.message : 'MP4 export failed.');
+      setExportError(error instanceof Error ? error.message : 'MP4 export failed.');
+    } finally {
+      setIsExportingMp4(false);
     }
-  }, [getExportScope]);
+  }, [getExportScope, isExportingMp4]);
+
+  const dismissExportError = useCallback(() => {
+    setExportError(null);
+  }, []);
 
   const handleToggleRunning = useCallback(() => {
     setRunning((value) => !value);
@@ -764,6 +777,9 @@ export default function App() {
           onExportPng={handleExportPng}
           onExportSvg={handleExportSvg}
           onExportMp4={handleExportMp4}
+          exportError={exportError}
+          isExportingMp4={isExportingMp4}
+          onDismissExportError={dismissExportError}
           onSaveEntry={saveManualEntry}
           onLoadEntry={handleLoadEntry}
           onDeleteEntry={deleteEntry}
