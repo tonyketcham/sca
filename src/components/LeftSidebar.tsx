@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
+import { ScrubbableNumberField } from './ui/scrubbable-number-field';
 import { ScrollArea } from './ui/scroll-area';
 import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
 import { SectionHeading } from './ui/section-heading';
@@ -149,32 +149,24 @@ export default function LeftSidebar({
               <div className="space-y-4">
                 <SectionHeading>Paper Setup</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
-                  <LabeledField
+                  <ScrubbableNumberField
                     id={fieldId('paper-width')}
                     label={`Width (${paper.unit})`}
-                  >
-                    <ScrubbableNumberInput
-                      id={fieldId('paper-width')}
-                      min={1}
-                      value={paper.width}
-                      onValueChange={(next) =>
-                        onPaperChange({ ...paper, width: next })
-                      }
-                    />
-                  </LabeledField>
-                  <LabeledField
+                    min={1}
+                    value={paper.width}
+                    onValueChange={(next) =>
+                      onPaperChange({ ...paper, width: next })
+                    }
+                  />
+                  <ScrubbableNumberField
                     id={fieldId('paper-height')}
                     label={`Height (${paper.unit})`}
-                  >
-                    <ScrubbableNumberInput
-                      id={fieldId('paper-height')}
-                      min={1}
-                      value={paper.height}
-                      onValueChange={(next) =>
-                        onPaperChange({ ...paper, height: next })
-                      }
-                    />
-                  </LabeledField>
+                    min={1}
+                    value={paper.height}
+                    onValueChange={(next) =>
+                      onPaperChange({ ...paper, height: next })
+                    }
+                  />
                   <LabeledField id={fieldId('paper-unit')} label="Units">
                     <Select
                       value={paper.unit}
@@ -192,60 +184,53 @@ export default function LeftSidebar({
                       </SelectContent>
                     </Select>
                   </LabeledField>
-                  <LabeledField id={fieldId('paper-dpi')} label="DPI">
-                    <ScrubbableNumberInput
-                      id={fieldId('paper-dpi')}
-                      min={36}
-                      integer
-                      value={paper.dpi}
-                      onValueChange={(next) =>
-                        onPaperChange({ ...paper, dpi: next })
-                      }
-                    />
-                  </LabeledField>
+                  <ScrubbableNumberField
+                    id={fieldId('paper-dpi')}
+                    label="DPI"
+                    min={36}
+                    integer
+                    value={paper.dpi}
+                    onValueChange={(next) =>
+                      onPaperChange({ ...paper, dpi: next })
+                    }
+                  />
                 </div>
               </div>
 
               <div className="space-y-4">
                 <SectionHeading>Template Grid</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
-                  <LabeledField id={fieldId('template-rows')} label="Rows">
-                    <ScrubbableNumberInput
-                      id={fieldId('template-rows')}
-                      min={1}
-                      integer
-                      value={templateGrid.rows}
-                      onValueChange={(next) =>
-                        onTemplateGridChange({ ...templateGrid, rows: next })
-                      }
-                    />
-                  </LabeledField>
-                  <LabeledField id={fieldId('template-cols')} label="Columns">
-                    <ScrubbableNumberInput
-                      id={fieldId('template-cols')}
-                      min={1}
-                      integer
-                      value={templateGrid.cols}
-                      onValueChange={(next) =>
-                        onTemplateGridChange({ ...templateGrid, cols: next })
-                      }
-                    />
-                  </LabeledField>
-                  <LabeledField
+                  <ScrubbableNumberField
+                    id={fieldId('template-rows')}
+                    label="Rows"
+                    min={1}
+                    integer
+                    value={templateGrid.rows}
+                    onValueChange={(next) =>
+                      onTemplateGridChange({ ...templateGrid, rows: next })
+                    }
+                  />
+                  <ScrubbableNumberField
+                    id={fieldId('template-cols')}
+                    label="Columns"
+                    min={1}
+                    integer
+                    value={templateGrid.cols}
+                    onValueChange={(next) =>
+                      onTemplateGridChange({ ...templateGrid, cols: next })
+                    }
+                  />
+                  <ScrubbableNumberField
                     id={fieldId('template-gutter')}
                     label={`Gutter (${paper.unit})`}
                     className="col-span-2"
-                  >
-                    <ScrubbableNumberInput
-                      id={fieldId('template-gutter')}
-                      min={0}
-                      step={0.1}
-                      value={templateGrid.gutter}
-                      onValueChange={(next) =>
-                        onTemplateGridChange({ ...templateGrid, gutter: next })
-                      }
-                    />
-                  </LabeledField>
+                    min={0}
+                    step={0.1}
+                    value={templateGrid.gutter}
+                    onValueChange={(next) =>
+                      onTemplateGridChange({ ...templateGrid, gutter: next })
+                    }
+                  />
                 </div>
                 <div className="space-y-2">
                   <SwitchControlRow

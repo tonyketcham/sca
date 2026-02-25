@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
+import { ScrubbableNumberField } from './ui/scrubbable-number-field';
 import { ScrollArea } from './ui/scroll-area';
 import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
 import { SectionHeading } from './ui/section-heading';
@@ -188,111 +188,102 @@ export default function RightSidebar({
             <SectionHeading>Simulation Parameters</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <LabeledField
+              <ScrubbableNumberField
                 id={fieldId('sim-influence-radius')}
                 label="Influence"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('sim-influence-radius')}
-                  min={5}
-                  integer
-                  value={mixedParams?.influenceRadius ?? null}
-                  placeholder={
-                    mixedParams?.influenceRadius === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, influenceRadius: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('sim-kill-radius')} label="Kill Radius">
-                <ScrubbableNumberInput
-                  id={fieldId('sim-kill-radius')}
-                  min={1}
-                  integer
-                  value={mixedParams?.killRadius ?? null}
-                  placeholder={
-                    mixedParams?.killRadius === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, killRadius: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('sim-step-size')} label="Step Size">
-                <ScrubbableNumberInput
-                  id={fieldId('sim-step-size')}
-                  min={0.5}
-                  step={0.5}
-                  value={mixedParams?.stepSize ?? null}
-                  placeholder={
-                    mixedParams?.stepSize === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, stepSize: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('sim-max-nodes')} label="Max Nodes">
-                <ScrubbableNumberInput
-                  id={fieldId('sim-max-nodes')}
-                  min={100}
-                  integer
-                  value={mixedParams?.maxNodes ?? null}
-                  placeholder={
-                    mixedParams?.maxNodes === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, maxNodes: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('sim-attractor-count')} label="Targets">
-                <ScrubbableNumberInput
-                  id={fieldId('sim-attractor-count')}
-                  min={50}
-                  integer
-                  value={mixedParams?.attractorCount ?? null}
-                  placeholder={
-                    mixedParams?.attractorCount === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, attractorCount: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('sim-steps-per-frame')} label="Speed">
-                <ScrubbableNumberInput
-                  id={fieldId('sim-steps-per-frame')}
-                  min={1}
-                  integer
-                  value={mixedParams?.stepsPerFrame ?? null}
-                  placeholder={
-                    mixedParams?.stepsPerFrame === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, stepsPerFrame: next },
-                    }))
-                  }
-                />
-              </LabeledField>
+                min={5}
+                integer
+                value={mixedParams?.influenceRadius ?? null}
+                placeholder={
+                  mixedParams?.influenceRadius === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, influenceRadius: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-kill-radius')}
+                label="Kill Radius"
+                min={1}
+                integer
+                value={mixedParams?.killRadius ?? null}
+                placeholder={
+                  mixedParams?.killRadius === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, killRadius: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-step-size')}
+                label="Step Size"
+                min={0.5}
+                step={0.5}
+                value={mixedParams?.stepSize ?? null}
+                placeholder={
+                  mixedParams?.stepSize === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, stepSize: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-max-nodes')}
+                label="Max Nodes"
+                min={100}
+                integer
+                value={mixedParams?.maxNodes ?? null}
+                placeholder={
+                  mixedParams?.maxNodes === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, maxNodes: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-attractor-count')}
+                label="Targets"
+                min={50}
+                integer
+                value={mixedParams?.attractorCount ?? null}
+                placeholder={
+                  mixedParams?.attractorCount === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, attractorCount: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-steps-per-frame')}
+                label="Speed"
+                min={1}
+                integer
+                value={mixedParams?.stepsPerFrame ?? null}
+                placeholder={
+                  mixedParams?.stepsPerFrame === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, stepsPerFrame: next },
+                  }))
+                }
+              />
             </div>
 
             <div className="space-y-2 pt-2">
@@ -311,41 +302,39 @@ export default function RightSidebar({
 
             <InsetPanel tone="subtle" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <LabeledField id={fieldId('sim-seed-count')} label="Seed Count">
-                  <ScrubbableNumberInput
-                    id={fieldId('sim-seed-count')}
-                    min={1}
-                    integer
-                    value={mixedParams?.seedCount ?? null}
-                    placeholder={
-                      mixedParams?.seedCount === null ? 'Mixed' : undefined
-                    }
-                    onValueChange={(next) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        params: { ...f.params, seedCount: next },
-                      }))
-                    }
-                  />
-                </LabeledField>
-                <LabeledField id={fieldId('sim-seed-spread')} label="Spread %">
-                  <ScrubbableNumberInput
-                    id={fieldId('sim-seed-spread')}
-                    min={0}
-                    max={100}
-                    integer
-                    value={mixedParams?.seedSpread ?? null}
-                    placeholder={
-                      mixedParams?.seedSpread === null ? 'Mixed' : undefined
-                    }
-                    onValueChange={(next) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        params: { ...f.params, seedSpread: next },
-                      }))
-                    }
-                  />
-                </LabeledField>
+                <ScrubbableNumberField
+                  id={fieldId('sim-seed-count')}
+                  label="Seed Count"
+                  min={1}
+                  integer
+                  value={mixedParams?.seedCount ?? null}
+                  placeholder={
+                    mixedParams?.seedCount === null ? 'Mixed' : undefined
+                  }
+                  onValueChange={(next) =>
+                    onUpdateSelectedFrames((f) => ({
+                      ...f,
+                      params: { ...f.params, seedCount: next },
+                    }))
+                  }
+                />
+                <ScrubbableNumberField
+                  id={fieldId('sim-seed-spread')}
+                  label="Spread %"
+                  min={0}
+                  max={100}
+                  integer
+                  value={mixedParams?.seedSpread ?? null}
+                  placeholder={
+                    mixedParams?.seedSpread === null ? 'Mixed' : undefined
+                  }
+                  onValueChange={(next) =>
+                    onUpdateSelectedFrames((f) => ({
+                      ...f,
+                      params: { ...f.params, seedSpread: next },
+                    }))
+                  }
+                />
                 <LabeledField
                   id={fieldId('sim-seed-placement')}
                   label="Placement"
@@ -408,24 +397,23 @@ export default function RightSidebar({
                       </SelectContent>
                     </Select>
                   </LabeledField>
-                  <LabeledField id={fieldId('sim-seed-angle')} label="Angle °">
-                    <ScrubbableNumberInput
-                      id={fieldId('sim-seed-angle')}
-                      min={-180}
-                      max={180}
-                      integer
-                      value={mixedParams?.seedAngle ?? null}
-                      placeholder={
-                        mixedParams?.seedAngle === null ? 'Mixed' : undefined
-                      }
-                      onValueChange={(next) =>
-                        onUpdateSelectedFrames((f) => ({
-                          ...f,
-                          params: { ...f.params, seedAngle: next },
-                        }))
-                      }
-                    />
-                  </LabeledField>
+                  <ScrubbableNumberField
+                    id={fieldId('sim-seed-angle')}
+                    label="Angle °"
+                    min={-180}
+                    max={180}
+                    integer
+                    value={mixedParams?.seedAngle ?? null}
+                    placeholder={
+                      mixedParams?.seedAngle === null ? 'Mixed' : undefined
+                    }
+                    onValueChange={(next) =>
+                      onUpdateSelectedFrames((f) => ({
+                        ...f,
+                        params: { ...f.params, seedAngle: next },
+                      }))
+                    }
+                  />
                 </div>
               )}
             </InsetPanel>
@@ -444,29 +432,25 @@ export default function RightSidebar({
                 rowClassName="px-0 py-0 bg-transparent border-none hover:bg-transparent"
               />
               <div className="flex items-center gap-2">
-                <LabeledField
+                <ScrubbableNumberField
                   id={fieldId('sim-seed')}
                   label="Seed Value"
                   className="flex-1"
-                >
-                  <ScrubbableNumberInput
-                    id={fieldId('sim-seed')}
-                    min={0}
-                    integer
-                    value={mixedSeed?.seed ?? null}
-                    placeholder={mixedSeed?.seed === null ? 'Mixed' : undefined}
-                    onValueChange={(next) =>
-                      onUpdateSelectedFrames((f) => ({ ...f, seed: next }), {
-                        rebuildSimulation: true,
-                        seedOverride: next,
-                      })
-                    }
-                    disabled={mixedSeed?.randomizeSeed === true}
-                    className={
-                      mixedSeed?.randomizeSeed === true ? 'opacity-50' : ''
-                    }
-                  />
-                </LabeledField>
+                  min={0}
+                  integer
+                  value={mixedSeed?.seed ?? null}
+                  placeholder={mixedSeed?.seed === null ? 'Mixed' : undefined}
+                  onValueChange={(next) =>
+                    onUpdateSelectedFrames((f) => ({ ...f, seed: next }), {
+                      rebuildSimulation: true,
+                      seedOverride: next,
+                    })
+                  }
+                  disabled={mixedSeed?.randomizeSeed === true}
+                  inputClassName={
+                    mixedSeed?.randomizeSeed === true ? 'opacity-50' : ''
+                  }
+                />
               </div>
             </InsetPanel>
           </div>
@@ -486,141 +470,120 @@ export default function RightSidebar({
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <LabeledField id={fieldId('obs-count')} label="Count">
-                <ScrubbableNumberInput
-                  id={fieldId('obs-count')}
-                  min={0}
-                  integer
-                  value={mixedObstacles?.count ?? null}
-                  placeholder={
-                    mixedObstacles?.count === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, count: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+              <ScrubbableNumberField
+                id={fieldId('obs-count')}
+                label="Count"
+                min={0}
+                integer
+                value={mixedObstacles?.count ?? null}
+                placeholder={
+                  mixedObstacles?.count === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, count: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('obs-margin')}
                 label={`Margin (${unit})`}
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('obs-margin')}
-                  min={0}
-                  step={0.1}
-                  value={mixedObstacles?.margin ?? null}
-                  placeholder={
-                    mixedObstacles?.margin === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, margin: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+                min={0}
+                step={0.1}
+                value={mixedObstacles?.margin ?? null}
+                placeholder={
+                  mixedObstacles?.margin === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, margin: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('obs-min-vertices')}
                 label="Min Vertices"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('obs-min-vertices')}
-                  min={3}
-                  integer
-                  value={mixedObstacles?.minVertices ?? null}
-                  placeholder={
-                    mixedObstacles?.minVertices === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, minVertices: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+                min={3}
+                integer
+                value={mixedObstacles?.minVertices ?? null}
+                placeholder={
+                  mixedObstacles?.minVertices === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, minVertices: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('obs-max-vertices')}
                 label="Max Vertices"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('obs-max-vertices')}
-                  min={3}
-                  integer
-                  value={mixedObstacles?.maxVertices ?? null}
-                  placeholder={
-                    mixedObstacles?.maxVertices === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, maxVertices: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+                min={3}
+                integer
+                value={mixedObstacles?.maxVertices ?? null}
+                placeholder={
+                  mixedObstacles?.maxVertices === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, maxVertices: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('obs-min-radius')}
                 label={`Min Radius (${unit})`}
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('obs-min-radius')}
-                  min={0.1}
-                  step={0.1}
-                  value={mixedObstacles?.minRadius ?? null}
-                  placeholder={
-                    mixedObstacles?.minRadius === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, minRadius: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+                min={0.1}
+                step={0.1}
+                value={mixedObstacles?.minRadius ?? null}
+                placeholder={
+                  mixedObstacles?.minRadius === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, minRadius: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('obs-max-radius')}
                 label={`Max Radius (${unit})`}
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('obs-max-radius')}
-                  min={0.2}
-                  step={0.1}
-                  value={mixedObstacles?.maxRadius ?? null}
-                  placeholder={
-                    mixedObstacles?.maxRadius === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames(
-                      (f) => ({
-                        ...f,
-                        obstacles: { ...f.obstacles, maxRadius: next },
-                      }),
-                      { rebuildSimulation: true },
-                    )
-                  }
-                />
-              </LabeledField>
+                min={0.2}
+                step={0.1}
+                value={mixedObstacles?.maxRadius ?? null}
+                placeholder={
+                  mixedObstacles?.maxRadius === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      obstacles: { ...f.obstacles, maxRadius: next },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
             </div>
           </div>
 
@@ -628,53 +591,43 @@ export default function RightSidebar({
             <SectionHeading>Appearance</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <LabeledField
+              <ScrubbableNumberField
                 id={fieldId('render-stroke-width')}
                 label="Stroke Width"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('render-stroke-width')}
-                  min={0.5}
-                  step={0.5}
-                  value={mixedRenderSettings?.strokeWidth ?? null}
-                  placeholder={
-                    mixedRenderSettings?.strokeWidth === null
-                      ? 'Mixed'
-                      : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      renderSettings: {
-                        ...f.renderSettings,
-                        strokeWidth: next,
-                      },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+                min={0.5}
+                step={0.5}
+                value={mixedRenderSettings?.strokeWidth ?? null}
+                placeholder={
+                  mixedRenderSettings?.strokeWidth === null
+                    ? 'Mixed'
+                    : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      strokeWidth: next,
+                    },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('render-node-radius')}
                 label="Node Radius"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('render-node-radius')}
-                  min={0.5}
-                  step={0.5}
-                  value={mixedRenderSettings?.nodeRadius ?? null}
-                  placeholder={
-                    mixedRenderSettings?.nodeRadius === null
-                      ? 'Mixed'
-                      : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      renderSettings: { ...f.renderSettings, nodeRadius: next },
-                    }))
-                  }
-                />
-              </LabeledField>
+                min={0.5}
+                step={0.5}
+                value={mixedRenderSettings?.nodeRadius ?? null}
+                placeholder={
+                  mixedRenderSettings?.nodeRadius === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: { ...f.renderSettings, nodeRadius: next },
+                  }))
+                }
+              />
               <ColorSwatchField
                 id={fieldId('render-root-color')}
                 label="Root Color"
@@ -766,77 +719,71 @@ export default function RightSidebar({
             <SectionHeading>Export Settings</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
-              <LabeledField id={fieldId('export-fps')} label="FPS">
-                <ScrubbableNumberInput
-                  id={fieldId('export-fps')}
-                  min={1}
-                  integer
-                  value={mixedExportSettings?.fps ?? null}
-                  placeholder={
-                    mixedExportSettings?.fps === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      exportSettings: { ...f.exportSettings, fps: next },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField id={fieldId('export-steps')} label="Steps/Frame">
-                <ScrubbableNumberInput
-                  id={fieldId('export-steps')}
-                  min={1}
-                  integer
-                  value={mixedExportSettings?.stepsPerFrame ?? null}
-                  placeholder={
-                    mixedExportSettings?.stepsPerFrame === null
-                      ? 'Mixed'
-                      : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      exportSettings: {
-                        ...f.exportSettings,
-                        stepsPerFrame: next,
-                      },
-                    }))
-                  }
-                />
-              </LabeledField>
-              <LabeledField
+              <ScrubbableNumberField
+                id={fieldId('export-fps')}
+                label="FPS"
+                min={1}
+                integer
+                value={mixedExportSettings?.fps ?? null}
+                placeholder={
+                  mixedExportSettings?.fps === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    exportSettings: { ...f.exportSettings, fps: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('export-steps')}
+                label="Steps/Frame"
+                min={1}
+                integer
+                value={mixedExportSettings?.stepsPerFrame ?? null}
+                placeholder={
+                  mixedExportSettings?.stepsPerFrame === null
+                    ? 'Mixed'
+                    : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    exportSettings: {
+                      ...f.exportSettings,
+                      stepsPerFrame: next,
+                    },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
                 id={fieldId('export-duration')}
                 label="Duration (s)"
                 className="col-span-2"
-              >
-                <ScrubbableNumberInput
-                  id={fieldId('export-duration')}
-                  min={1}
-                  integer
-                  value={mixedExportSettings?.durationSeconds ?? null}
-                  placeholder={
-                    mixedExportSettings?.durationSeconds === null
-                      ? 'Mixed'
-                      : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      exportSettings: {
-                        ...f.exportSettings,
-                        durationSeconds: next,
-                      },
-                    }))
-                  }
-                  disabled={mixedExportSettings?.durationMode === 'auto'}
-                  className={
-                    mixedExportSettings?.durationMode === 'auto'
-                      ? 'opacity-50'
-                      : ''
-                  }
-                />
-              </LabeledField>
+                min={1}
+                integer
+                value={mixedExportSettings?.durationSeconds ?? null}
+                placeholder={
+                  mixedExportSettings?.durationSeconds === null
+                    ? 'Mixed'
+                    : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    exportSettings: {
+                      ...f.exportSettings,
+                      durationSeconds: next,
+                    },
+                  }))
+                }
+                disabled={mixedExportSettings?.durationMode === 'auto'}
+                inputClassName={
+                  mixedExportSettings?.durationMode === 'auto'
+                    ? 'opacity-50'
+                    : ''
+                }
+              />
             </div>
 
             <SwitchControlRow

@@ -29,10 +29,12 @@ Use this for reusable control group containers (for example, seed controls and a
 - `ColorSwatchField`: compact labeled color swatch + native color input control.
 - `SwitchControlRow`: standardized `Label + Switch` control row with optional row/label/switch class overrides.
 - `LabeledField`: standardized vertical field layout (`Label` + control) for numeric/select/input controls.
+- `ScrubbableNumberField`: purpose-built numeric control (`LabeledField + ScrubbableNumberInput`) with optional mixed-state placeholder.
 
 Use this when exposing color controls in inspector sections to ensure consistent spacing and affordance.
 Use `SwitchControlRow` whenever a toggle appears in a control section to keep label typography and row behavior aligned.
 Use `LabeledField` for all sidebar form fields to keep label spacing and `htmlFor` wiring consistent.
+Use `ScrubbableNumberField` for numeric controls to avoid repeating mixed placeholder logic and wrapper boilerplate.
 
 ## Tokens
 
