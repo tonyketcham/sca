@@ -1,24 +1,29 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
-import type { SimulationState, Vec2 } from '../engine/simulationState'
-import { stepSimulation } from '../engine/spaceColonization'
-import { getArtboardOrigin, renderComposite, type GridLayout, type ViewTransform } from '../render/canvasRenderer'
-import type { FrameConfig, TemplateGridSettings } from '../types/ui'
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import type { SimulationState, Vec2 } from '../engine/simulationState';
+import { stepSimulation } from '../engine/spaceColonization';
+import {
+  getArtboardOrigin,
+  renderComposite,
+  type GridLayout,
+  type ViewTransform,
+} from '../render/canvasRenderer';
+import type { FrameConfig, TemplateGridSettings } from '../types/ui';
 
 type CanvasViewProps = {
-  simulationRef: RefObject<SimulationState[]>
-  framesRef: RefObject<FrameConfig[]>
-  gridLayout: GridLayout
-  templateGrid: TemplateGridSettings
-  selectedFrameIndices: number[]
-  onSelectFrame: (index: number) => void
-  onToggleFrame: (index: number) => void
-  onClearSelection: () => void
-  running: boolean
-  canvasRef: RefObject<HTMLCanvasElement | null>
-}
+  simulationRef: RefObject<SimulationState[]>;
+  framesRef: RefObject<FrameConfig[]>;
+  gridLayout: GridLayout;
+  templateGrid: TemplateGridSettings;
+  selectedFrameIndices: number[];
+  onSelectFrame: (index: number) => void;
+  onToggleFrame: (index: number) => void;
+  onClearSelection: () => void;
+  running: boolean;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
+};
 
-const MIN_ZOOM = 0.2
-const MAX_ZOOM = 4
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 4;
 
 export default function CanvasView({
   simulationRef,
@@ -30,328 +35,387 @@ export default function CanvasView({
   onToggleFrame,
   onClearSelection,
   running,
-  canvasRef
+  canvasRef,
 }: CanvasViewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<ViewTransform>({
     pan: { x: 0, y: 0 },
-    zoom: 1
-  })
-  const canvasSizeRef = useRef({ width: 1, height: 1, dpr: 1 })
-  const isDraggingRef = useRef(false)
-  const lastPointerRef = useRef<Vec2>({ x: 0, y: 0 })
-  const pointerDownRef = useRef<{ x: number; y: number; frameIndex: number | null } | null>(null)
-  const hoveredFrameRef = useRef<number | null>(null)
-  const frameRef = useRef<number | null>(null)
+    zoom: 1,
+  });
+  const canvasSizeRef = useRef({ width: 1, height: 1, dpr: 1 });
+  const isDraggingRef = useRef(false);
+  const lastPointerRef = useRef<Vec2>({ x: 0, y: 0 });
+  const pointerDownRef = useRef<{
+    x: number;
+    y: number;
+    frameIndex: number | null;
+  } | null>(null);
+  const hoveredFrameRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const container = containerRef.current
-    const canvas = canvasRef.current
-    if (!container || !canvas) return
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect
-        const dpr = window.devicePixelRatio || 1
-        const logicalWidth = Math.max(1, Math.floor(width))
-        const logicalHeight = Math.max(1, Math.floor(height))
-        canvas.style.width = `${logicalWidth}px`
-        canvas.style.height = `${logicalHeight}px`
-        canvas.width = Math.max(1, Math.floor(logicalWidth * dpr))
-        canvas.height = Math.max(1, Math.floor(logicalHeight * dpr))
-        canvasSizeRef.current = { width: logicalWidth, height: logicalHeight, dpr }
+        const { width, height } = entry.contentRect;
+        const dpr = window.devicePixelRatio || 1;
+        const logicalWidth = Math.max(1, Math.floor(width));
+        const logicalHeight = Math.max(1, Math.floor(height));
+        canvas.style.width = `${logicalWidth}px`;
+        canvas.style.height = `${logicalHeight}px`;
+        canvas.width = Math.max(1, Math.floor(logicalWidth * dpr));
+        canvas.height = Math.max(1, Math.floor(logicalHeight * dpr));
+        canvasSizeRef.current = {
+          width: logicalWidth,
+          height: logicalHeight,
+          dpr,
+        };
       }
-    })
-    resizeObserver.observe(container)
+    });
+    resizeObserver.observe(container);
 
-    return () => resizeObserver.disconnect()
-  }, [canvasRef])
+    return () => resizeObserver.disconnect();
+  }, [canvasRef]);
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
     const updateHover = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect()
+      const rect = canvas.getBoundingClientRect();
       const point = {
         x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      }
-      hoveredFrameRef.current = getFrameIndexAtPoint(point, canvas, gridLayout, viewRef.current)
-    }
+        y: event.clientY - rect.top,
+      };
+      hoveredFrameRef.current = getFrameIndexAtPoint(
+        point,
+        canvas,
+        gridLayout,
+        viewRef.current,
+      );
+    };
 
     const onPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0) return
-      const rect = canvas.getBoundingClientRect()
+      if (event.button !== 0) return;
+      const rect = canvas.getBoundingClientRect();
       const point = {
         x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      }
+        y: event.clientY - rect.top,
+      };
       pointerDownRef.current = {
         x: event.clientX,
         y: event.clientY,
-        frameIndex: getFrameIndexAtPoint(point, canvas, gridLayout, viewRef.current)
-      }
-      isDraggingRef.current = false
-      lastPointerRef.current = { x: event.clientX, y: event.clientY }
-      canvas.setPointerCapture(event.pointerId)
-      canvas.focus()
-    }
+        frameIndex: getFrameIndexAtPoint(
+          point,
+          canvas,
+          gridLayout,
+          viewRef.current,
+        ),
+      };
+      isDraggingRef.current = false;
+      lastPointerRef.current = { x: event.clientX, y: event.clientY };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.focus();
+    };
 
     const onPointerUp = (event: PointerEvent) => {
       if (pointerDownRef.current && !isDraggingRef.current) {
-        const { frameIndex } = pointerDownRef.current
+        const { frameIndex } = pointerDownRef.current;
         if (typeof frameIndex === 'number') {
           if (event.metaKey || event.ctrlKey) {
-            onToggleFrame(frameIndex)
+            onToggleFrame(frameIndex);
           } else {
-            onSelectFrame(frameIndex)
+            onSelectFrame(frameIndex);
           }
         } else {
-          onClearSelection()
+          onClearSelection();
         }
       }
-      pointerDownRef.current = null
-      isDraggingRef.current = false
+      pointerDownRef.current = null;
+      isDraggingRef.current = false;
       if (canvas.hasPointerCapture(event.pointerId)) {
-        canvas.releasePointerCapture(event.pointerId)
+        canvas.releasePointerCapture(event.pointerId);
       }
-    }
+    };
 
     const onPointerLeave = (event: PointerEvent) => {
-      hoveredFrameRef.current = null
-      onPointerUp(event)
-    }
+      hoveredFrameRef.current = null;
+      onPointerUp(event);
+    };
 
     const onPointerMove = (event: PointerEvent) => {
       if (!pointerDownRef.current) {
-        updateHover(event)
-        return
+        updateHover(event);
+        return;
       }
 
       if (!isDraggingRef.current) {
         const distance = Math.hypot(
           event.clientX - pointerDownRef.current.x,
-          event.clientY - pointerDownRef.current.y
-        )
+          event.clientY - pointerDownRef.current.y,
+        );
         if (distance < 3) {
-          return
+          return;
         }
-        isDraggingRef.current = true
+        isDraggingRef.current = true;
       }
 
-      const deltaX = event.clientX - lastPointerRef.current.x
-      const deltaY = event.clientY - lastPointerRef.current.y
-      lastPointerRef.current = { x: event.clientX, y: event.clientY }
-      viewRef.current.pan.x += deltaX
-      viewRef.current.pan.y += deltaY
-    }
+      const deltaX = event.clientX - lastPointerRef.current.x;
+      const deltaY = event.clientY - lastPointerRef.current.y;
+      lastPointerRef.current = { x: event.clientX, y: event.clientY };
+      viewRef.current.pan.x += deltaX;
+      viewRef.current.pan.y += deltaY;
+    };
 
     const applyZoom = (pointer: Vec2, nextZoom: number) => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const { zoom } = viewRef.current
-      if (nextZoom === zoom) return
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const { zoom } = viewRef.current;
+      if (nextZoom === zoom) return;
 
       const bounds = {
         width: gridLayout.cellWidth * gridLayout.cols,
-        height: gridLayout.cellHeight * gridLayout.rows
-      }
-      const { width, height } = canvasSizeRef.current
-      const origin = getArtboardOrigin(width, height, bounds, viewRef.current)
+        height: gridLayout.cellHeight * gridLayout.rows,
+      };
+      const { width, height } = canvasSizeRef.current;
+      const origin = getArtboardOrigin(width, height, bounds, viewRef.current);
       const worldPoint = {
         x: (pointer.x - origin.x) / zoom,
-        y: (pointer.y - origin.y) / zoom
-      }
+        y: (pointer.y - origin.y) / zoom,
+      };
       const nextOrigin = {
         x: pointer.x - worldPoint.x * nextZoom,
-        y: pointer.y - worldPoint.y * nextZoom
-      }
+        y: pointer.y - worldPoint.y * nextZoom,
+      };
 
-      viewRef.current.zoom = nextZoom
+      viewRef.current.zoom = nextZoom;
       viewRef.current.pan = {
         x: nextOrigin.x - (width - bounds.width * nextZoom) * 0.5,
-        y: nextOrigin.y - (height - bounds.height * nextZoom) * 0.5
-      }
-    }
+        y: nextOrigin.y - (height - bounds.height * nextZoom) * 0.5,
+      };
+    };
 
     const onWheel = (event: WheelEvent) => {
-      event.preventDefault()
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
+      event.preventDefault();
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
       const pointer = {
         x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-      }
+        y: event.clientY - rect.top,
+      };
 
-      let delta = event.deltaY
+      let delta = event.deltaY;
       if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
-        delta *= 16
+        delta *= 16;
       } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
-        delta *= canvasSizeRef.current.height
+        delta *= canvasSizeRef.current.height;
       }
 
-      const zoomSpeed = event.ctrlKey ? 0.025 : 0.015
-      const { zoom } = viewRef.current
-      const nextZoom = clamp(zoom * Math.exp(-delta * zoomSpeed), MIN_ZOOM, MAX_ZOOM)
-      applyZoom(pointer, nextZoom)
-    }
+      const zoomSpeed = event.ctrlKey ? 0.025 : 0.015;
+      const { zoom } = viewRef.current;
+      const nextZoom = clamp(
+        zoom * Math.exp(-delta * zoomSpeed),
+        MIN_ZOOM,
+        MAX_ZOOM,
+      );
+      applyZoom(pointer, nextZoom);
+    };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      const panStep = event.shiftKey ? 96 : 48
+      const panStep = event.shiftKey ? 96 : 48;
       const center = {
         x: canvasSizeRef.current.width * 0.5,
-        y: canvasSizeRef.current.height * 0.5
-      }
-      let handled = true
+        y: canvasSizeRef.current.height * 0.5,
+      };
+      let handled = true;
       switch (event.key) {
         case 'ArrowLeft':
-          viewRef.current.pan.x += panStep
-          break
+          viewRef.current.pan.x += panStep;
+          break;
         case 'ArrowRight':
-          viewRef.current.pan.x -= panStep
-          break
+          viewRef.current.pan.x -= panStep;
+          break;
         case 'ArrowUp':
-          viewRef.current.pan.y += panStep
-          break
+          viewRef.current.pan.y += panStep;
+          break;
         case 'ArrowDown':
-          viewRef.current.pan.y -= panStep
-          break
+          viewRef.current.pan.y -= panStep;
+          break;
         case '=':
         case '+':
-          applyZoom(center, clamp(viewRef.current.zoom * 1.1, MIN_ZOOM, MAX_ZOOM))
-          break
+          applyZoom(
+            center,
+            clamp(viewRef.current.zoom * 1.1, MIN_ZOOM, MAX_ZOOM),
+          );
+          break;
         case '-':
         case '_':
-          applyZoom(center, clamp(viewRef.current.zoom * 0.9, MIN_ZOOM, MAX_ZOOM))
-          break
+          applyZoom(
+            center,
+            clamp(viewRef.current.zoom * 0.9, MIN_ZOOM, MAX_ZOOM),
+          );
+          break;
         case '0':
-          viewRef.current.pan = { x: 0, y: 0 }
-          viewRef.current.zoom = 1
-          break
+          viewRef.current.pan = { x: 0, y: 0 };
+          viewRef.current.zoom = 1;
+          break;
         default:
-          handled = false
+          handled = false;
       }
       if (handled) {
-        event.preventDefault()
+        event.preventDefault();
       }
-    }
+    };
 
-    canvas.addEventListener('pointerdown', onPointerDown)
-    canvas.addEventListener('pointerup', onPointerUp)
-    canvas.addEventListener('pointerleave', onPointerLeave)
-    canvas.addEventListener('pointermove', onPointerMove)
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    canvas.addEventListener('keydown', onKeyDown)
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointerleave', onPointerLeave);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('keydown', onKeyDown);
 
     return () => {
-      canvas.removeEventListener('pointerdown', onPointerDown)
-      canvas.removeEventListener('pointerup', onPointerUp)
-      canvas.removeEventListener('pointerleave', onPointerLeave)
-      canvas.removeEventListener('pointermove', onPointerMove)
-      canvas.removeEventListener('wheel', onWheel)
-      canvas.removeEventListener('keydown', onKeyDown)
-    }
-  }, [canvasRef, gridLayout, onClearSelection, onSelectFrame, onToggleFrame, simulationRef])
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('keydown', onKeyDown);
+    };
+  }, [
+    canvasRef,
+    gridLayout,
+    onClearSelection,
+    onSelectFrame,
+    onToggleFrame,
+    simulationRef,
+  ]);
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-      const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     const animate = () => {
-        const { width, height, dpr } = canvasSizeRef.current
-      const frames = framesRef.current
-      const states = simulationRef.current
+      const { width, height, dpr } = canvasSizeRef.current;
+      const frames = framesRef.current;
+      const states = simulationRef.current;
 
       if (running) {
         for (let index = 0; index < states.length; index += 1) {
-          const state = states[index]
-          const frame = frames[index]
-          if (!state || !frame || state.completed) continue
+          const state = states[index];
+          const frame = frames[index];
+          if (!state || !frame || state.completed) continue;
           for (let i = 0; i < frame.params.stepsPerFrame; i += 1) {
-            stepSimulation(state, frame.params)
-            if (state.completed) break
+            stepSimulation(state, frame.params);
+            if (state.completed) break;
           }
         }
       }
 
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-        renderComposite(ctx, states, {
-          canvasWidth: width,
-          canvasHeight: height,
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      renderComposite(ctx, states, {
+        canvasWidth: width,
+        canvasHeight: height,
         view: viewRef.current,
         mode: 'editor',
         grid: gridLayout,
         frames,
         templateGrid,
         hoveredFrameIndex: hoveredFrameRef.current,
-        selectedFrameIndices
-      })
+        selectedFrameIndices,
+      });
 
-      frameRef.current = requestAnimationFrame(animate)
-    }
+      frameRef.current = requestAnimationFrame(animate);
+    };
 
-    frameRef.current = requestAnimationFrame(animate)
+    frameRef.current = requestAnimationFrame(animate);
 
     return () => {
       if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current)
+        cancelAnimationFrame(frameRef.current);
       }
-    }
-  }, [canvasRef, framesRef, gridLayout, running, selectedFrameIndices, simulationRef, templateGrid])
+    };
+  }, [
+    canvasRef,
+    framesRef,
+    gridLayout,
+    running,
+    selectedFrameIndices,
+    simulationRef,
+    templateGrid,
+  ]);
 
   const viewHints = useMemo(
     () => (
-      <div className="pointer-events-none absolute bottom-4 right-4 rounded-sm border border-slate-500/25 bg-slate-950/70 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-400 backdrop-blur-sm">
-        <div>Drag to pan</div>
-        <div>Pinch or scroll to zoom</div>
-        <div>Arrow keys pan, +/- zoom</div>
+      <div className="pointer-events-none absolute bottom-4 right-4 rounded border border-border/40 bg-surface/80 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted shadow-sm backdrop-blur-md transition-opacity duration-300">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 justify-between">
+            <span>Pan</span>
+            <span className="font-semibold text-foreground/60">Drag</span>
+          </div>
+          <div className="flex items-center gap-2 justify-between">
+            <span>Zoom</span>
+            <span className="font-semibold text-foreground/60">Scroll</span>
+          </div>
+          <div className="flex items-center gap-2 justify-between">
+            <span>Select</span>
+            <span className="font-semibold text-foreground/60">Click</span>
+          </div>
+        </div>
       </div>
     ),
-    []
-  )
+    [],
+  );
 
   return (
-    <div className="relative h-full w-full" ref={containerRef}>
+    <div className="relative h-full w-full bg-background" ref={containerRef}>
       <canvas
         ref={canvasRef}
-        className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
+        className="block h-full w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:ring-inset cursor-grab active:cursor-grabbing"
         tabIndex={0}
         aria-label="Simulation canvas. Drag to pan, scroll to zoom, use arrow keys to pan, plus and minus to zoom, and zero to reset view."
       />
       {viewHints}
     </div>
-  )
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
+  return Math.min(max, Math.max(min, value));
 }
 
 function getFrameIndexAtPoint(
   point: Vec2,
   canvas: HTMLCanvasElement,
   gridLayout: GridLayout,
-  view: ViewTransform
+  view: ViewTransform,
 ): number | null {
   const bounds = {
     width: gridLayout.cellWidth * gridLayout.cols,
-    height: gridLayout.cellHeight * gridLayout.rows
+    height: gridLayout.cellHeight * gridLayout.rows,
+  };
+  const canvasWidth = canvas.clientWidth || canvas.width;
+  const canvasHeight = canvas.clientHeight || canvas.height;
+  const origin = getArtboardOrigin(canvasWidth, canvasHeight, bounds, view);
+  const worldX = (point.x - origin.x) / view.zoom;
+  const worldY = (point.y - origin.y) / view.zoom;
+  if (
+    worldX < 0 ||
+    worldY < 0 ||
+    worldX > bounds.width ||
+    worldY > bounds.height
+  ) {
+    return null;
   }
-  const canvasWidth = canvas.clientWidth || canvas.width
-  const canvasHeight = canvas.clientHeight || canvas.height
-  const origin = getArtboardOrigin(canvasWidth, canvasHeight, bounds, view)
-  const worldX = (point.x - origin.x) / view.zoom
-  const worldY = (point.y - origin.y) / view.zoom
-  if (worldX < 0 || worldY < 0 || worldX > bounds.width || worldY > bounds.height) {
-    return null
-  }
-  const col = Math.floor(worldX / gridLayout.cellWidth)
-  const row = Math.floor(worldY / gridLayout.cellHeight)
-  const index = row * gridLayout.cols + col
-  return gridLayout.cells[index] ? index : null
+  const col = Math.floor(worldX / gridLayout.cellWidth);
+  const row = Math.floor(worldY / gridLayout.cellHeight);
+  const index = row * gridLayout.cols + col;
+  return gridLayout.cells[index] ? index : null;
 }
