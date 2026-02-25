@@ -1,6 +1,29 @@
 When adding, renaming, or changing any configuration parameter or schema field, always:
+
 - add a new schema version and pure migration functions that convert older versions to the latest in `src/utils/schemaMigrations.ts`
 - update serialization in `src/utils/serialize.ts` to use the latest version and call migrations in decode/load paths
 - keep migrations deterministic and side-effect free (no I/O, no randomness, no global state)
 
 Never use `any`, avoid using `unknown`. Use complex type utilities when possible, such as mapped or conditional types.
+
+## Design Context
+
+### Users
+
+Designers and creative coders who demand intentional, professional, and state-of-the-art tools.
+
+### Brand Personality
+
+Sophisticated, precise, technical, and elegant. The interface should evoke a sense of quiet power, high quality, and meticulous attention to detail, akin to leading design engineering products (Vercel, Raycast, Spline).
+
+### Aesthetic Direction
+
+A modern, OKLCH-based dark aesthetic that avoids pure blacks and whites in favor of deeply tinted, cohesive neutral tones. Typography is geometric and highly legible (Geist, Inter). The aesthetic completely avoids generic "AI slop" or standard component library defaults (like default shadcn/ui or unmodified Tailwind blue).
+
+### Design Principles
+
+1. **Subtle Depth & Precision**: Use precise sizing (e.g., `h-[16px] w-[28px]`) and complex, subtle shadows (`inset_0_1px_2px_rgba(0,0,0,0.3)`) to create depth. Avoid flat, lifeless backgrounds or overly heavy borders.
+2. **Intentional Motion**: All transitions and state changes must feel incredibly polished. Use a custom `ease-out-expo` easing curve (`cubic-bezier(0.16, 1, 0.3, 1)`) and appropriate durations (e.g., `duration-300`) rather than standard linear/ease animations.
+3. **Compact, Tool-Like Density**: UI primitives should feel like a native application or pro-tool (e.g., smaller inputs, compact buttons, inline labels) rather than a sparse web page.
+4. **Cohesive OKLCH Colors**: Maintain the sophisticated OKLCH-based color scale for all new components. Use CSS variables defined in the theme to maintain perfect harmony across surfaces, borders, and text.
+5. **No Lazy Defaults**: Never rely on generic defaults. Every component should be intentionally designed—from custom border colors on hover to scale transforms on active states (`active:scale-[0.98]`).
