@@ -133,6 +133,19 @@ export default function App() {
   const urlUpdateRef = useRef<number | null>(null);
   const simulationRef = useRef<SimulationState[]>([]);
 
+  /**
+   * Track the latest non-preview config and running state via refs that are
+   * updated synchronously during render.  This prevents a race condition where
+   * handlePreviewEnd clears previewConfigRef, then a mouseenter fires before
+   * the restore render commits — the stale closure would capture the *preview*
+   * configState, permanently losing the real project.  Reading from these refs
+   * ensures handlePreviewEntry always saves the true pre-preview values.
+   *
+   * Initialised with null/false and populated after configState is defined.
+   */
+  const latestRealConfigRef = useRef<ConfigState | null>(null);
+  const latestRealRunningRef = useRef<boolean>(running);
+
   const selectedFrameIndicesRef = useRef(selectedFrameIndices);
 
   useEffect(() => {
@@ -482,6 +495,14 @@ export default function App() {
     [paper, templateGrid, frames, selectedFrameIndices],
   );
 
+  // Synchronous render-phase update: keep the "real" (non-preview) snapshot
+  // current so that handlePreviewEntry can always read the true pre-preview
+  // state, even when its closure is stale from a previous preview render.
+  if (!previewConfigRef.current) {
+    latestRealConfigRef.current = configState;
+    latestRealRunningRef.current = running;
+  }
+
   const {
     savedEntries,
     saveManualEntry,
@@ -565,12 +586,12 @@ export default function App() {
       if (previewConfigRef.current) return;
       const config = getEntryConfig(id);
       if (!config) return;
-      previewConfigRef.current = configState;
-      previewRunningRef.current = running;
+      previewConfigRef.current = latestRealConfigRef.current;
+      previewRunningRef.current = latestRealRunningRef.current;
       setRunning(true);
       applyConfig(normalizeConfig(config));
     },
-    [applyConfig, configState, getEntryConfig, normalizeConfig, running],
+    [applyConfig, getEntryConfig, normalizeConfig],
   );
 
   const handlePreviewEnd = useCallback(() => {
