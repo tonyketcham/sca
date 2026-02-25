@@ -583,7 +583,9 @@ export default function App() {
 
   const handlePreviewEntry = useCallback(
     (id: string) => {
-      if (previewConfigRef.current) return;
+      if (previewConfigRef.current) {
+        return;
+      }
       const config = getEntryConfig(id);
       if (!config) return;
       previewConfigRef.current = latestRealConfigRef.current;

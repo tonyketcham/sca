@@ -96,6 +96,7 @@ export default function ControlsPanel({
   onPreviewEnd,
 }: ControlsPanelProps) {
   const [saveName, setSaveName] = useState('');
+  const [isSavedRunsModalOpen, setIsSavedRunsModalOpen] = useState(false);
   const defaultSections: Record<SectionKey, boolean> = {
     simulation: true,
     template: true,
@@ -287,8 +288,13 @@ export default function ControlsPanel({
       </button>
     );
   };
+  const closeSavedRunsModal = () => {
+    setIsSavedRunsModalOpen(false);
+    onPreviewEnd();
+  };
+
   return (
-    <div className="flex h-full flex-col bg-zinc-950/30 text-[11px] text-zinc-300">
+    <div className="relative flex h-full flex-col bg-zinc-950/30 text-[11px] text-zinc-300">
       <LayersPanel
         frames={frames}
         templateGrid={templateGrid}
@@ -1317,72 +1323,19 @@ export default function ControlsPanel({
               <section className="space-y-3 px-4 py-3">
                 {renderSectionHeader('Saved Runs', 'saved')}
                 {openSections.saved ? (
-                  <div id="section-saved" className="space-y-3">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input
-                        value={saveName}
-                        onChange={(event) => setSaveName(event.target.value)}
-                        placeholder="New save name"
-                      />
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => {
-                          onSaveEntry(saveName);
-                          setSaveName('');
-                        }}
-                      >
-                        Save current
-                      </Button>
+                  <div id="section-saved" className="space-y-2">
+                    <div className="text-[10px] text-zinc-500">
+                      Open saved runs in a stable popout to preview without panel
+                      layout shifts.
                     </div>
-                    <div className="space-y-2">
-                      {savedEntries.length === 0 ? (
-                        <div className="text-[10px] text-zinc-500">
-                          No saved runs yet.
-                        </div>
-                      ) : (
-                        savedEntries.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none"
-                            onMouseEnter={() => onPreviewEntry(entry.id)}
-                            onMouseLeave={onPreviewEnd}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <div className="text-[12px] text-zinc-100">
-                                  {entry.name}
-                                </div>
-                                <div className="text-[10px] text-zinc-500">
-                                  Seed: {entry.seed}{' '}
-                                  {entry.randomizeSeed ? '(random)' : '(fixed)'}
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() => onLoadEntry(entry.id)}
-                                >
-                                  Load
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  className="h-7 px-2 text-[11px]"
-                                  onClick={() => onDeleteEntry(entry.id)}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => setIsSavedRunsModalOpen(true)}
+                    >
+                      Open saved runs ({savedEntries.length})
+                    </Button>
                   </div>
                 ) : null}
               </section>
@@ -1390,6 +1343,112 @@ export default function ControlsPanel({
           </div>
         </div>
       </ScrollArea>
+
+      {isSavedRunsModalOpen ? (
+        <div
+          className="absolute inset-0 z-50 bg-zinc-950/80 p-3"
+          onMouseDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            closeSavedRunsModal();
+          }}
+        >
+          <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-700 bg-zinc-950 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
+              <div>
+                <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-100">
+                  Saved Runs
+                </h2>
+                <p className="text-[10px] text-zinc-500">
+                  Hover entries to preview. Leave this popout to restore.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2 text-[11px]"
+                onClick={closeSavedRunsModal}
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-hidden p-3">
+              <ScrollArea className="h-full pr-2">
+                <div
+                  className="space-y-3"
+                  onMouseLeave={onPreviewEnd}
+                >
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={saveName}
+                      onChange={(event) => setSaveName(event.target.value)}
+                      placeholder="New save name"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2 text-[11px]"
+                      onClick={() => {
+                        onSaveEntry(saveName);
+                        setSaveName('');
+                      }}
+                    >
+                      Save current
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {savedEntries.length === 0 ? (
+                      <div className="text-[10px] text-zinc-500">
+                        No saved runs yet.
+                      </div>
+                    ) : (
+                      savedEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none"
+                          onMouseEnter={() => onPreviewEntry(entry.id)}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="text-[12px] text-zinc-100">
+                                {entry.name}
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                Seed: {entry.seed}{' '}
+                                {entry.randomizeSeed ? '(random)' : '(fixed)'}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => onLoadEntry(entry.id)}
+                              >
+                                Load
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => onDeleteEntry(entry.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
