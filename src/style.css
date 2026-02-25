@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,11 +7,25 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --app-bg: #0a0f16;
+    --app-text: #d6dfec;
+    --app-text-strong: #f4f8ff;
+    --app-accent-grid: rgba(139, 178, 255, 0.05);
   }
 
   body {
-    @apply bg-zinc-950 text-zinc-100 font-sans;
     margin: 0;
+    overflow: hidden;
+    font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+    color: var(--app-text);
+    background-color: var(--app-bg);
+    background-image:
+      radial-gradient(circle at 14% -10%, rgba(146, 176, 255, 0.15), transparent 36%),
+      radial-gradient(circle at 86% 0%, rgba(62, 92, 132, 0.28), transparent 44%),
+      linear-gradient(var(--app-accent-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--app-accent-grid) 1px, transparent 1px);
+    background-size: auto, auto, 24px 24px, 24px 24px;
+    background-position: center;
   }
 
   html,
@@ -18,7 +34,8 @@
     height: 100%;
   }
 
-  body {
-    overflow: hidden;
+  *::selection {
+    background: rgba(139, 178, 255, 0.28);
+    color: var(--app-text-strong);
   }
 }

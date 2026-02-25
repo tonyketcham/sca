@@ -752,8 +752,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-zinc-950 lg:h-screen lg:flex-row">
-      <aside className="h-[46dvh] w-full border-b border-zinc-800 bg-zinc-950 lg:h-screen lg:w-[360px] lg:min-w-[360px] lg:border-b-0 lg:border-r">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-[#080d14] lg:h-screen lg:flex-row">
+      <aside className="h-[46dvh] w-full border-b border-slate-500/25 bg-[#0d1420]/95 backdrop-blur-sm lg:h-screen lg:w-[360px] lg:min-w-[360px] lg:border-b-0 lg:border-r">
         <ControlsPanel
           paper={paper}
           templateGrid={templateGrid}
@@ -787,7 +787,7 @@ export default function App() {
           onPreviewEnd={handlePreviewEnd}
         />
       </aside>
-      <main className="relative min-h-0 flex-1 bg-zinc-950">
+      <main className="relative min-h-0 flex-1 bg-[#070b12]">
         <CanvasView
           key={`${boundsPx.width}-${boundsPx.height}-${gridLayout.rows}-${gridLayout.cols}`}
           simulationRef={simulationRef}

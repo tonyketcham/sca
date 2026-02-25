@@ -3,12 +3,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const controlRowVariants = cva(
-  'flex items-center justify-between rounded-md border px-2.5 py-2 transition-colors duration-200 ease-out motion-reduce:transition-none',
+  'flex items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-150 ease-out motion-reduce:transition-none',
   {
     variants: {
       tone: {
         default:
-          'border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900/70',
+          'border-slate-500/25 bg-slate-900/45 hover:border-slate-400/40 hover:bg-slate-900/70',
       },
     },
     defaultVariants: {

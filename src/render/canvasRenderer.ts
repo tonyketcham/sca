@@ -61,7 +61,7 @@ export function renderSimulation(
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
   if (mode === 'editor') {
-    ctx.fillStyle = '#1f1f1f'
+    ctx.fillStyle = '#0a0f16'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
   } else {
     ctx.fillStyle = '#ffffff'
@@ -122,7 +122,7 @@ export function renderComposite(
   } = options
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
   if (mode === 'editor') {
-    ctx.fillStyle = '#1f1f1f'
+    ctx.fillStyle = '#0a0f16'
     ctx.fillRect(0, 0, canvasWidth, canvasHeight)
   } else {
     ctx.fillStyle = '#ffffff'
@@ -198,12 +198,12 @@ function drawSelectionOutline(
 ): void {
   ctx.save()
   if (state.selected) {
-    ctx.strokeStyle = 'rgba(59, 130, 246, 0.9)'
+    ctx.strokeStyle = 'rgba(139, 178, 255, 0.92)'
     ctx.lineWidth = 2 / zoom
     ctx.strokeRect(0, 0, bounds.width, bounds.height)
   }
   if (state.hovered) {
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)'
+    ctx.strokeStyle = 'rgba(206, 221, 247, 0.82)'
     ctx.lineWidth = 1 / zoom
     ctx.strokeRect(0, 0, bounds.width, bounds.height)
   }

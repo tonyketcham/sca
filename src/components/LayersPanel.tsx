@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { GripVertical, Layers } from 'lucide-react'
@@ -37,7 +37,9 @@ export default function LayersPanel({
   onRenameFrame
 }: LayersPanelProps) {
   const isProjectSelected = selectedFrameIndices.length === 0
-  const columnCount = Math.max(1, templateGrid.cols)
+  const rowCount = Math.max(1, Math.floor(templateGrid.rows))
+  const columnCount = Math.max(1, Math.floor(templateGrid.cols))
+  const totalCells = rowCount * columnCount
   const [anchorIndex, setAnchorIndex] = useState<number | null>(null)
 
   useEffect(() => {
@@ -52,35 +54,44 @@ export default function LayersPanel({
   }
 
   return (
-    <section className="space-y-2 border-b border-zinc-800 px-4 py-3">
+    <section className="space-y-3 border-b border-slate-500/25 px-4 py-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100">
+        <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
           <Layers className="h-3.5 w-3.5" />
           Layers
         </div>
-        <div className="text-xs text-zinc-400">{frames.length} frames</div>
+        <div className="text-[11px] tabular-nums text-slate-400">
+          {frames.length}/{totalCells} cells
+        </div>
       </div>
-      <div className="max-h-[240px] overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/50">
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+        <button
+          type="button"
+          onClick={handleSelectProject}
+          className={cn(
+            'flex w-full items-center justify-between rounded-sm border px-2.5 py-2 text-left text-xs transition',
+            isProjectSelected
+              ? 'border-blue-300/55 bg-blue-300/16 text-blue-100'
+              : 'border-slate-500/25 bg-slate-900/45 text-slate-200 hover:border-slate-400/40 hover:bg-slate-900/70',
+          )}
+        >
+          <span className="font-semibold">Project Setup</span>
+          <span className="text-[11px] text-slate-400">Paper + Template</span>
+        </button>
+        <div className="flex h-full min-w-[98px] items-center justify-center rounded-sm border border-slate-500/25 bg-slate-900/35 px-2 text-[11px] font-medium tabular-nums text-slate-300">
+          {rowCount} x {columnCount}
+        </div>
+      </div>
+
+      <div className="h-[clamp(12rem,30vh,17.5rem)] overflow-hidden rounded-sm border border-slate-500/25 bg-slate-950/50">
         <ScrollArea className="h-full">
           <div className="space-y-1 p-1">
-            <button
-              type="button"
-              onClick={handleSelectProject}
-              className={cn(
-                'flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-left text-xs transition',
-                isProjectSelected
-                  ? 'border-blue-500/70 bg-blue-500/10 text-blue-200'
-                  : 'border-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900'
-              )}
-            >
-              <span className="font-semibold">Project</span>
-              <span className="text-xs text-zinc-400">Paper + Grid</span>
-            </button>
             {frames.map((frame, index) => (
               <FrameLayerRow
                 key={`frame-layer-${index}`}
                 index={index}
-                columnCount={columnCount}
+                layerNumber={index + 1}
                 frameName={frame.name}
                 isSelected={selectedFrameIndices.includes(index)}
                 anchorIndex={anchorIndex}
@@ -101,7 +112,7 @@ export default function LayersPanel({
 
 type FrameLayerRowProps = {
   index: number
-  columnCount: number
+  layerNumber: number
   frameName: string
   isSelected: boolean
   anchorIndex: number | null
@@ -115,7 +126,7 @@ type FrameLayerRowProps = {
 
 function FrameLayerRow({
   index,
-  columnCount,
+  layerNumber,
   frameName,
   isSelected,
   anchorIndex,
@@ -170,12 +181,8 @@ function FrameLayerRow({
     inputRef.current?.select()
   }, [isEditing])
 
-  const label = useMemo(() => {
-    const row = Math.floor(index / columnCount)
-    const col = index % columnCount
-    const baseName = frameName.trim() || `Frame ${index + 1}`
-    return `${baseName} (R${row + 1}, C${col + 1})`
-  }, [columnCount, frameName, index])
+  const baseName = frameName.trim() || `Frame ${layerNumber}`
+  const label = `${baseName} (Layer ${layerNumber})`
 
   const applySelection = (modifiers: {
     shiftKey: boolean
@@ -204,7 +211,7 @@ function FrameLayerRow({
   }
 
   const normalizeFrameName = (value: string) => {
-    const nextName = value.trim() || frameName.trim() || `Frame ${index + 1}`
+    const nextName = value.trim() || frameName.trim() || `Frame ${layerNumber}`
     return nextName.slice(0, MAX_FRAME_NAME_LENGTH)
   }
 
@@ -243,19 +250,19 @@ function FrameLayerRow({
         }
       }}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500',
+        'flex cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-300/60',
         isSelected
-          ? 'border-blue-500/70 bg-blue-500/10 text-blue-200'
-          : 'border-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900',
-        isDraggedOver ? 'border-blue-400/80 bg-blue-400/10' : null,
+          ? 'border-blue-300/55 bg-blue-300/16 text-blue-100'
+          : 'border-transparent text-slate-300 hover:border-slate-400/30 hover:bg-slate-900/70',
+        isDraggedOver ? 'border-blue-300/70 bg-blue-300/20' : null,
         isDragging ? 'opacity-70' : null
       )}
     >
-      <GripVertical className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden="true" />
+      <GripVertical className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
       {isEditing ? (
         <input
           ref={inputRef}
-          className="flex-1 rounded-sm border border-zinc-700 bg-zinc-950 px-1 py-0.5 text-xs text-zinc-100 outline-none"
+          className="flex-1 rounded-sm border border-slate-500/35 bg-slate-950 px-1 py-0.5 text-xs text-slate-100 outline-none"
           value={draftName}
           onChange={(event) =>
             setDraftName(event.target.value.slice(0, MAX_FRAME_NAME_LENGTH))
@@ -284,9 +291,12 @@ function FrameLayerRow({
             setIsEditing(true)
           }}
         >
-          {label}
+          {baseName}
         </span>
       )}
+      <span className="shrink-0 rounded-sm border border-slate-500/35 bg-slate-900/70 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-400">
+        #{layerNumber}
+      </span>
     </div>
   )
 }

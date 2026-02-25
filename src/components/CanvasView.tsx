@@ -306,7 +306,7 @@ export default function CanvasView({
 
   const viewHints = useMemo(
     () => (
-      <div className="pointer-events-none absolute bottom-4 right-4 text-xs text-zinc-500">
+      <div className="pointer-events-none absolute bottom-4 right-4 rounded-sm border border-slate-500/25 bg-slate-950/70 px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-slate-400 backdrop-blur-sm">
         <div>Drag to pan</div>
         <div>Pinch or scroll to zoom</div>
         <div>Arrow keys pan, +/- zoom</div>
@@ -319,7 +319,7 @@ export default function CanvasView({
     <div className="relative h-full w-full" ref={containerRef}>
       <canvas
         ref={canvasRef}
-        className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+        className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
         tabIndex={0}
         aria-label="Simulation canvas. Drag to pan, scroll to zoom, use arrow keys to pan, plus and minus to zoom, and zero to reset view."
       />

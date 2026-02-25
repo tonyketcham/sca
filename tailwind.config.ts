@@ -6,7 +6,14 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif']
+        sans: [
+          'IBM Plex Sans',
+          'Avenir Next',
+          'Segoe UI',
+          'system-ui',
+          'sans-serif',
+        ],
+        mono: ['IBM Plex Mono', 'SFMono-Regular', 'Consolas', 'monospace'],
       }
     }
   },

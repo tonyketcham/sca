@@ -4,19 +4,22 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-sm border text-[11px] font-medium tracking-[0.02em] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:pointer-events-none disabled:opacity-45',
   {
     variants: {
       variant: {
-        default: 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200',
-        secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
-        outline: 'border border-zinc-700 text-zinc-100 hover:bg-zinc-800',
+        default:
+          'border-blue-300/35 bg-blue-300/15 text-blue-50 hover:border-blue-300/55 hover:bg-blue-300/25',
+        secondary:
+          'border-slate-500/30 bg-slate-900/80 text-slate-100 hover:border-slate-400/45 hover:bg-slate-800/90',
+        outline:
+          'border-slate-500/35 bg-transparent text-slate-200 hover:border-slate-400/45 hover:bg-slate-800/70',
       },
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 px-3 text-xs',
-        compact: 'h-8 px-2.5 text-xs',
-        lg: 'h-10 px-6',
+        default: 'h-8 px-3',
+        sm: 'h-7 px-2.5 text-[10px]',
+        compact: 'h-7 px-2 text-[10px]',
+        lg: 'h-9 px-5 text-xs',
       },
     },
     defaultVariants: {
