@@ -1,4 +1,4 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
@@ -6,16 +6,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: [
-          'IBM Plex Sans',
-          'Avenir Next',
-          'Segoe UI',
-          'system-ui',
-          'sans-serif',
-        ],
-        mono: ['IBM Plex Mono', 'SFMono-Regular', 'Consolas', 'monospace'],
-      }
-    }
+        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'SFMono-Regular', 'Consolas', 'monospace'],
+      },
+      colors: {
+        background: 'oklch(var(--background) / <alpha-value>)',
+        surface: 'oklch(var(--surface) / <alpha-value>)',
+        surfaceHover: 'oklch(var(--surface-hover) / <alpha-value>)',
+        border: 'oklch(var(--border) / <alpha-value>)',
+        borderHover: 'oklch(var(--border-hover) / <alpha-value>)',
+        foreground: 'oklch(var(--foreground) / <alpha-value>)',
+        muted: 'oklch(var(--muted) / <alpha-value>)',
+        primary: 'oklch(var(--primary) / <alpha-value>)',
+        primaryHover: 'oklch(var(--primary-hover) / <alpha-value>)',
+        primaryForeground: 'oklch(var(--primary-foreground) / <alpha-value>)',
+      },
+      transitionTimingFunction: {
+        'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
+      },
+    },
   },
-  plugins: []
-} satisfies Config
+  plugins: [require('tailwindcss-animate')],
+} satisfies Config;

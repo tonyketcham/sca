@@ -3,12 +3,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const controlRowVariants = cva(
-  'flex items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-150 ease-out motion-reduce:transition-none',
+  'flex items-center justify-between rounded-md px-2.5 py-1.5 transition-colors duration-300 ease-out-expo motion-reduce:transition-none',
   {
     variants: {
       tone: {
         default:
-          'border-slate-500/25 bg-slate-900/45 hover:border-slate-400/40 hover:bg-slate-900/70',
+          'bg-transparent hover:bg-surface/40 border border-transparent hover:border-border/30',
       },
     },
     defaultVariants: {
@@ -18,7 +18,8 @@ const controlRowVariants = cva(
 );
 
 export interface ControlRowProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends
+    React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof controlRowVariants> {}
 
 const ControlRow = React.forwardRef<HTMLDivElement, ControlRowProps>(

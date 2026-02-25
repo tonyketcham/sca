@@ -1,29 +1,32 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
-import { GripVertical, Layers } from 'lucide-react'
-import type { FrameConfig, TemplateGridSettings } from '../types/ui'
-import { cn } from '../lib/utils'
-import { ScrollArea } from './ui/scroll-area'
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  draggable,
+  dropTargetForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
+import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
+import { GripVertical, Layers } from 'lucide-react';
+import type { FrameConfig, TemplateGridSettings } from '../types/ui';
+import { cn } from '../lib/utils';
+import { ScrollArea } from './ui/scroll-area';
 
 type LayersPanelProps = {
-  frames: FrameConfig[]
-  templateGrid: TemplateGridSettings
-  selectedFrameIndices: number[]
-  onSelectProject: () => void
-  onSelectFrame: (index: number) => void
-  onToggleFrame: (index: number) => void
-  onSelectFrameRange: (startIndex: number, endIndex: number) => void
-  onReorderFrames: (startIndex: number, endIndex: number) => void
-  onRenameFrame: (index: number, name: string) => void
-}
+  frames: FrameConfig[];
+  templateGrid: TemplateGridSettings;
+  selectedFrameIndices: number[];
+  onSelectProject: () => void;
+  onSelectFrame: (index: number) => void;
+  onToggleFrame: (index: number) => void;
+  onSelectFrameRange: (startIndex: number, endIndex: number) => void;
+  onReorderFrames: (startIndex: number, endIndex: number) => void;
+  onRenameFrame: (index: number, name: string) => void;
+};
 
 type DragData = {
-  type: 'frame-layer'
-  index: number
-}
+  type: 'frame-layer';
+  index: number;
+};
 
-const MAX_FRAME_NAME_LENGTH = 120
+const MAX_FRAME_NAME_LENGTH = 120;
 
 export default function LayersPanel({
   frames,
@@ -34,33 +37,33 @@ export default function LayersPanel({
   onToggleFrame,
   onSelectFrameRange,
   onReorderFrames,
-  onRenameFrame
+  onRenameFrame,
 }: LayersPanelProps) {
-  const isProjectSelected = selectedFrameIndices.length === 0
-  const rowCount = Math.max(1, Math.floor(templateGrid.rows))
-  const columnCount = Math.max(1, Math.floor(templateGrid.cols))
-  const totalCells = rowCount * columnCount
-  const [anchorIndex, setAnchorIndex] = useState<number | null>(null)
+  const isProjectSelected = selectedFrameIndices.length === 0;
+  const rowCount = Math.max(1, Math.floor(templateGrid.rows));
+  const columnCount = Math.max(1, Math.floor(templateGrid.cols));
+  const totalCells = rowCount * columnCount;
+  const [anchorIndex, setAnchorIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (selectedFrameIndices.length === 0) {
-      setAnchorIndex(null)
+      setAnchorIndex(null);
     }
-  }, [selectedFrameIndices.length])
+  }, [selectedFrameIndices.length]);
 
   const handleSelectProject = () => {
-    setAnchorIndex(null)
-    onSelectProject()
-  }
+    setAnchorIndex(null);
+    onSelectProject();
+  };
 
   return (
-    <section className="space-y-3 border-b border-slate-500/25 px-4 py-3">
+    <section className="space-y-3 border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+        <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
           <Layers className="h-3.5 w-3.5" />
           Layers
         </div>
-        <div className="text-[11px] tabular-nums text-slate-400">
+        <div className="text-[11px] tabular-nums text-muted opacity-70">
           {frames.length}/{totalCells} cells
         </div>
       </div>
@@ -70,23 +73,25 @@ export default function LayersPanel({
           type="button"
           onClick={handleSelectProject}
           className={cn(
-            'flex w-full items-center justify-between rounded-sm border px-2.5 py-2 text-left text-xs transition',
+            'flex w-full items-center justify-between rounded-md border px-2.5 py-2 text-left text-xs transition-colors duration-200 ease-out-expo',
             isProjectSelected
-              ? 'border-blue-300/55 bg-blue-300/16 text-blue-100'
-              : 'border-slate-500/25 bg-slate-900/45 text-slate-200 hover:border-slate-400/40 hover:bg-slate-900/70',
+              ? 'border-primary/50 bg-primary/20 text-primary'
+              : 'border-transparent bg-surface text-foreground hover:border-borderHover hover:bg-surfaceHover',
           )}
         >
           <span className="font-semibold">Project Setup</span>
-          <span className="text-[11px] text-slate-400">Paper + Template</span>
+          <span className="text-[11px] text-muted opacity-70">
+            Paper + Template
+          </span>
         </button>
-        <div className="flex h-full min-w-[98px] items-center justify-center rounded-sm border border-slate-500/25 bg-slate-900/35 px-2 text-[11px] font-medium tabular-nums text-slate-300">
+        <div className="flex h-[34px] min-w-[98px] items-center justify-center rounded-md border border-border bg-surface px-2 text-[11px] font-medium tabular-nums text-muted">
           {rowCount} x {columnCount}
         </div>
       </div>
 
-      <div className="h-[clamp(12rem,30vh,17.5rem)] overflow-hidden rounded-sm border border-slate-500/25 bg-slate-950/50">
+      <div className="h-[clamp(12rem,30vh,17.5rem)] overflow-hidden rounded-md border border-border bg-surface/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]">
         <ScrollArea className="h-full">
-          <div className="space-y-1 p-1">
+          <div className="space-y-1 p-1.5">
             {frames.map((frame, index) => (
               <FrameLayerRow
                 key={`frame-layer-${index}`}
@@ -107,22 +112,22 @@ export default function LayersPanel({
         </ScrollArea>
       </div>
     </section>
-  )
+  );
 }
 
 type FrameLayerRowProps = {
-  index: number
-  layerNumber: number
-  frameName: string
-  isSelected: boolean
-  anchorIndex: number | null
-  onSelectFrame: (index: number) => void
-  onToggleFrame: (index: number) => void
-  onSelectFrameRange: (startIndex: number, endIndex: number) => void
-  onUpdateAnchor: (index: number) => void
-  onReorderFrames: (startIndex: number, endIndex: number) => void
-  onRenameFrame: (index: number, name: string) => void
-}
+  index: number;
+  layerNumber: number;
+  frameName: string;
+  isSelected: boolean;
+  anchorIndex: number | null;
+  onSelectFrame: (index: number) => void;
+  onToggleFrame: (index: number) => void;
+  onSelectFrameRange: (startIndex: number, endIndex: number) => void;
+  onUpdateAnchor: (index: number) => void;
+  onReorderFrames: (startIndex: number, endIndex: number) => void;
+  onRenameFrame: (index: number, name: string) => void;
+};
 
 function FrameLayerRow({
   index,
@@ -135,99 +140,101 @@ function FrameLayerRow({
   onSelectFrameRange,
   onUpdateAnchor,
   onReorderFrames,
-  onRenameFrame
+  onRenameFrame,
 }: FrameLayerRowProps) {
-  const rowRef = useRef<HTMLDivElement | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const [isDraggedOver, setIsDraggedOver] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [draftName, setDraftName] = useState(frameName)
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isDraggedOver, setIsDraggedOver] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState(frameName);
 
   useEffect(() => {
-    const element = rowRef.current
-    if (!element) return
+    const element = rowRef.current;
+    if (!element) return;
 
     return combine(
       draggable({
         element,
-        getInitialData: () => ({ type: 'frame-layer', index } satisfies DragData),
+        getInitialData: () =>
+          ({ type: 'frame-layer', index }) satisfies DragData,
         onDragStart: () => setIsDragging(true),
-        onDrop: () => setIsDragging(false)
+        onDrop: () => setIsDragging(false),
       }),
       dropTargetForElements({
         element,
         getData: () => ({ index }),
-        canDrop: ({ source }) => (source.data as Partial<DragData>).type === 'frame-layer',
+        canDrop: ({ source }) =>
+          (source.data as Partial<DragData>).type === 'frame-layer',
         onDragEnter: () => setIsDraggedOver(true),
         onDragLeave: () => setIsDraggedOver(false),
         onDrop: ({ source }) => {
-          setIsDraggedOver(false)
-          const sourceIndex = Number((source.data as Partial<DragData>).index)
-          if (!Number.isFinite(sourceIndex) || sourceIndex === index) return
-          onReorderFrames(sourceIndex, index)
-        }
-      })
-    )
-  }, [index, onReorderFrames])
+          setIsDraggedOver(false);
+          const sourceIndex = Number((source.data as Partial<DragData>).index);
+          if (!Number.isFinite(sourceIndex) || sourceIndex === index) return;
+          onReorderFrames(sourceIndex, index);
+        },
+      }),
+    );
+  }, [index, onReorderFrames]);
 
   useEffect(() => {
-    setDraftName(frameName)
-  }, [frameName])
+    setDraftName(frameName);
+  }, [frameName]);
 
   useEffect(() => {
-    if (!isEditing) return
-    inputRef.current?.focus()
-    inputRef.current?.select()
-  }, [isEditing])
+    if (!isEditing) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [isEditing]);
 
-  const baseName = frameName.trim() || `Frame ${layerNumber}`
-  const label = `${baseName} (Layer ${layerNumber})`
+  const baseName = frameName.trim() || `Frame ${layerNumber}`;
+  const label = `${baseName} (Layer ${layerNumber})`;
 
   const applySelection = (modifiers: {
-    shiftKey: boolean
-    metaKey: boolean
-    ctrlKey: boolean
+    shiftKey: boolean;
+    metaKey: boolean;
+    ctrlKey: boolean;
   }) => {
-    if (isEditing) return
+    if (isEditing) return;
     if (modifiers.shiftKey) {
-      onSelectFrameRange(anchorIndex ?? index, index)
-      onUpdateAnchor(index)
-      return
+      onSelectFrameRange(anchorIndex ?? index, index);
+      onUpdateAnchor(index);
+      return;
     }
 
     if (modifiers.metaKey || modifiers.ctrlKey) {
-      onToggleFrame(index)
-      onUpdateAnchor(index)
-      return
+      onToggleFrame(index);
+      onUpdateAnchor(index);
+      return;
     }
 
-    onSelectFrame(index)
-    onUpdateAnchor(index)
-  }
+    onSelectFrame(index);
+    onUpdateAnchor(index);
+  };
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    applySelection(event)
-  }
+    applySelection(event);
+  };
 
   const normalizeFrameName = (value: string) => {
-    const nextName = value.trim() || frameName.trim() || `Frame ${layerNumber}`
-    return nextName.slice(0, MAX_FRAME_NAME_LENGTH)
-  }
+    const nextName = value.trim() || frameName.trim() || `Frame ${layerNumber}`;
+    return nextName.slice(0, MAX_FRAME_NAME_LENGTH);
+  };
 
   const commitName = () => {
-    const nextName = normalizeFrameName(draftName)
-    setDraftName(nextName)
-    setIsEditing(false)
+    const nextName = normalizeFrameName(draftName);
+    setDraftName(nextName);
+    setIsEditing(false);
     if (nextName !== frameName) {
-      onRenameFrame(index, nextName)
+      onRenameFrame(index, nextName);
     }
-  }
+  };
 
   const cancelName = () => {
-    setDraftName(frameName)
-    setIsEditing(false)
-  }
+    setDraftName(frameName);
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -238,31 +245,37 @@ function FrameLayerRow({
       aria-pressed={isSelected}
       aria-label={label}
       onKeyDown={(event) => {
-        if (isEditing) return
+        if (isEditing) return;
         if (event.key === 'F2') {
-          event.preventDefault()
-          setIsEditing(true)
-          return
+          event.preventDefault();
+          setIsEditing(true);
+          return;
         }
         if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          applySelection(event)
+          event.preventDefault();
+          applySelection(event);
         }
       }}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-sm border px-2 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-300/60',
+        'flex cursor-pointer items-center gap-2 rounded-[5px] border px-2 py-1.5 text-xs transition-all duration-200 ease-out-expo focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50',
         isSelected
-          ? 'border-blue-300/55 bg-blue-300/16 text-blue-100'
-          : 'border-transparent text-slate-300 hover:border-slate-400/30 hover:bg-slate-900/70',
-        isDraggedOver ? 'border-blue-300/70 bg-blue-300/20' : null,
-        isDragging ? 'opacity-70' : null
+          ? 'border-primary/50 bg-primary/20 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
+          : 'border-transparent text-foreground hover:border-borderHover hover:bg-surfaceHover',
+        isDraggedOver ? 'border-primary/70 bg-primary/20' : null,
+        isDragging ? 'opacity-70 scale-[0.98]' : null,
       )}
     >
-      <GripVertical className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+      <GripVertical
+        className={cn(
+          'h-3.5 w-3.5 shrink-0',
+          isSelected ? 'text-primary/70' : 'text-muted',
+        )}
+        aria-hidden="true"
+      />
       {isEditing ? (
         <input
           ref={inputRef}
-          className="flex-1 rounded-sm border border-slate-500/35 bg-slate-950 px-1 py-0.5 text-xs text-slate-100 outline-none"
+          className="flex-1 rounded-[4px] border border-border bg-background px-1.5 py-0.5 text-xs text-foreground outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]"
           value={draftName}
           onChange={(event) =>
             setDraftName(event.target.value.slice(0, MAX_FRAME_NAME_LENGTH))
@@ -272,12 +285,12 @@ function FrameLayerRow({
           aria-label={`Rename ${label}`}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
-              event.preventDefault()
-              commitName()
+              event.preventDefault();
+              commitName();
             }
             if (event.key === 'Escape') {
-              event.preventDefault()
-              cancelName()
+              event.preventDefault();
+              cancelName();
             }
           }}
           onPointerDown={(event) => event.stopPropagation()}
@@ -287,16 +300,23 @@ function FrameLayerRow({
           className="min-w-0 flex-1 truncate"
           title={label}
           onDoubleClick={(event) => {
-            event.stopPropagation()
-            setIsEditing(true)
+            event.stopPropagation();
+            setIsEditing(true);
           }}
         >
           {baseName}
         </span>
       )}
-      <span className="shrink-0 rounded-sm border border-slate-500/35 bg-slate-900/70 px-1.5 py-0.5 text-[10px] tabular-nums text-slate-400">
+      <span
+        className={cn(
+          'shrink-0 rounded-[4px] border px-1.5 py-0.5 text-[10px] tabular-nums transition-colors duration-200',
+          isSelected
+            ? 'border-primary/30 bg-primary/10 text-primary'
+            : 'border-border bg-surface text-muted',
+        )}
+      >
         #{layerNumber}
       </span>
     </div>
-  )
+  );
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CanvasView from './components/CanvasView';
-import ControlsPanel from './components/ControlsPanel';
+import LeftSidebar from './components/LeftSidebar';
+import RightSidebar from './components/RightSidebar';
+import Toolbar from './components/Toolbar';
 import {
   createSimulationState,
   type Bounds,
@@ -116,7 +118,9 @@ export default function App() {
   const [frames, setFrames] = useState<FrameConfig[]>(() => [
     createDefaultFrame(createFrameName(0)),
   ]);
-  const [selectedFrameIndices, setSelectedFrameIndices] = useState<number[]>([0]);
+  const [selectedFrameIndices, setSelectedFrameIndices] = useState<number[]>([
+    0,
+  ]);
   const [running, setRunning] = useState(true);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExportingMp4, setIsExportingMp4] = useState(false);
@@ -301,26 +305,31 @@ export default function App() {
     [buildFrameObstacles, gridLayout.cells],
   );
 
-  const normalizeSelection = useCallback((indices: number[], length: number): number[] => {
-    if (!Array.isArray(indices) || length < 1) return [];
-    const next: number[] = [];
-    const seen = new Set<number>();
-    for (const raw of indices) {
-      if (!Number.isFinite(raw)) continue;
-      const index = Math.floor(raw);
-      if (index < 0 || index >= length) continue;
-      if (seen.has(index)) continue;
-      seen.add(index);
-      next.push(index);
-    }
-    return next;
-  }, []);
+  const normalizeSelection = useCallback(
+    (indices: number[], length: number): number[] => {
+      if (!Array.isArray(indices) || length < 1) return [];
+      const next: number[] = [];
+      const seen = new Set<number>();
+      for (const raw of indices) {
+        if (!Number.isFinite(raw)) continue;
+        const index = Math.floor(raw);
+        if (index < 0 || index >= length) continue;
+        if (seen.has(index)) continue;
+        seen.add(index);
+        next.push(index);
+      }
+      return next;
+    },
+    [],
+  );
 
   useEffect(() => {
     setFrames((prev) => {
       const next = resizeFrames(prev, gridLayout.cells.length);
       if (next !== prev) {
-        setSelectedFrameIndices((indices) => normalizeSelection(indices, next.length));
+        setSelectedFrameIndices((indices) =>
+          normalizeSelection(indices, next.length),
+        );
         rebuildAllSimulations(next);
       }
       return next;
@@ -355,7 +364,7 @@ export default function App() {
         prev.iterations === next.iterations &&
         prev.completed === next.completed
           ? prev
-          : next
+          : next,
       );
     };
 
@@ -483,7 +492,9 @@ export default function App() {
       downloadBlob(blob, `root-growth-${Date.now()}.mp4`);
     } catch (error) {
       console.error(error);
-      setExportError(error instanceof Error ? error.message : 'MP4 export failed.');
+      setExportError(
+        error instanceof Error ? error.message : 'MP4 export failed.',
+      );
     } finally {
       setIsExportingMp4(false);
     }
@@ -526,25 +537,34 @@ export default function App() {
     enabled: !hydratingRef.current && previewConfigRef.current === null,
   });
 
-  const normalizeConfig = useCallback((config: ConfigState): ConfigState => {
-    const normalizedGrid = normalizeGrid(config.templateGrid);
-    const nextFrames = normalizeFrames(
-      config.frames,
-      normalizedGrid.rows * normalizedGrid.cols,
-    );
-    const legacyIndex = (config as { activeFrameIndex?: number }).activeFrameIndex;
-    const selectionSource = Array.isArray((config as ConfigState).selectedFrameIndices)
-      ? (config as ConfigState).selectedFrameIndices
-      : [legacyIndex ?? 0];
-    const normalizedSelection = normalizeSelection(selectionSource, nextFrames.length);
-    return {
-      schemaVersion: LATEST_SCHEMA_VERSION,
-      paper: { ...DEFAULT_PAPER, ...config.paper },
-      templateGrid: normalizedGrid,
-      frames: nextFrames,
-      selectedFrameIndices: normalizedSelection,
-    };
-  }, [normalizeSelection]);
+  const normalizeConfig = useCallback(
+    (config: ConfigState): ConfigState => {
+      const normalizedGrid = normalizeGrid(config.templateGrid);
+      const nextFrames = normalizeFrames(
+        config.frames,
+        normalizedGrid.rows * normalizedGrid.cols,
+      );
+      const legacyIndex = (config as { activeFrameIndex?: number })
+        .activeFrameIndex;
+      const selectionSource = Array.isArray(
+        (config as ConfigState).selectedFrameIndices,
+      )
+        ? (config as ConfigState).selectedFrameIndices
+        : [legacyIndex ?? 0];
+      const normalizedSelection = normalizeSelection(
+        selectionSource,
+        nextFrames.length,
+      );
+      return {
+        schemaVersion: LATEST_SCHEMA_VERSION,
+        paper: { ...DEFAULT_PAPER, ...config.paper },
+        templateGrid: normalizedGrid,
+        frames: nextFrames,
+        selectedFrameIndices: normalizedSelection,
+      };
+    },
+    [normalizeSelection],
+  );
 
   const applyConfig = useCallback(
     (config: ConfigState) => {
@@ -694,21 +714,27 @@ export default function App() {
     setSelectedFrameIndices([]);
   }, []);
 
-  const selectSingleFrame = useCallback((index: number) => {
-    setSelectedFrameIndices((prev) => {
-      if (prev.length === 1 && prev[0] === index) return prev;
-      return normalizeSelection([index], framesRef.current.length);
-    });
-  }, [normalizeSelection]);
+  const selectSingleFrame = useCallback(
+    (index: number) => {
+      setSelectedFrameIndices((prev) => {
+        if (prev.length === 1 && prev[0] === index) return prev;
+        return normalizeSelection([index], framesRef.current.length);
+      });
+    },
+    [normalizeSelection],
+  );
 
-  const toggleFrameSelection = useCallback((index: number) => {
-    setSelectedFrameIndices((prev) => {
-      if (prev.includes(index)) {
-        return prev.filter((item) => item !== index);
-      }
-      return normalizeSelection([...prev, index], framesRef.current.length);
-    });
-  }, [normalizeSelection]);
+  const toggleFrameSelection = useCallback(
+    (index: number) => {
+      setSelectedFrameIndices((prev) => {
+        if (prev.includes(index)) {
+          return prev.filter((item) => item !== index);
+        }
+        return normalizeSelection([...prev, index], framesRef.current.length);
+      });
+    },
+    [normalizeSelection],
+  );
 
   const selectFrameRange = useCallback(
     (startIndex: number, endIndex: number) => {
@@ -730,18 +756,21 @@ export default function App() {
     setSelectedFrameIndices([]);
   }, []);
 
-  const handleReorderFrames = useCallback((startIndex: number, endIndex: number) => {
-    if (startIndex === endIndex) return;
-    setFrames((prev) => reorderArray(prev, startIndex, endIndex));
-    setSelectedFrameIndices((prev) =>
-      remapSelectionForMove(prev, startIndex, endIndex),
-    );
-    simulationRef.current = reorderArray(
-      simulationRef.current,
-      startIndex,
-      endIndex,
-    );
-  }, []);
+  const handleReorderFrames = useCallback(
+    (startIndex: number, endIndex: number) => {
+      if (startIndex === endIndex) return;
+      setFrames((prev) => reorderArray(prev, startIndex, endIndex));
+      setSelectedFrameIndices((prev) =>
+        remapSelectionForMove(prev, startIndex, endIndex),
+      );
+      simulationRef.current = reorderArray(
+        simulationRef.current,
+        startIndex,
+        endIndex,
+      );
+    },
+    [],
+  );
 
   const handleRenameFrame = useCallback((index: number, name: string) => {
     setFrames((prev) =>
@@ -752,16 +781,14 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-[#080d14] lg:h-screen lg:flex-row">
-      <aside className="h-[46dvh] w-full border-b border-slate-500/25 bg-[#0d1420]/95 backdrop-blur-sm lg:h-screen lg:w-[360px] lg:min-w-[360px] lg:border-b-0 lg:border-r">
-        <ControlsPanel
+    <div className="flex h-dvh w-full overflow-hidden bg-background font-sans">
+      <aside className="h-full shrink-0">
+        <LeftSidebar
           paper={paper}
           templateGrid={templateGrid}
           frames={frames}
           selectedFrameIndices={selectedFrameIndices}
           savedEntries={savedEntries}
-          stats={stats}
-          running={running}
           onPaperChange={setPaper}
           onTemplateGridChange={setTemplateGrid}
           onSelectProject={selectProject}
@@ -770,16 +797,6 @@ export default function App() {
           onSelectFrameRange={selectFrameRange}
           onReorderFrames={handleReorderFrames}
           onRenameFrame={handleRenameFrame}
-          onUpdateSelectedFrames={updateSelectedFrames}
-          onToggleRunning={handleToggleRunning}
-          onResetSimulation={handleResetSimulation}
-          onRegenerateObstacles={handleRegenerateObstacles}
-          onExportPng={handleExportPng}
-          onExportSvg={handleExportSvg}
-          onExportMp4={handleExportMp4}
-          exportError={exportError}
-          isExportingMp4={isExportingMp4}
-          onDismissExportError={dismissExportError}
           onSaveEntry={saveManualEntry}
           onLoadEntry={handleLoadEntry}
           onDeleteEntry={deleteEntry}
@@ -787,7 +804,23 @@ export default function App() {
           onPreviewEnd={handlePreviewEnd}
         />
       </aside>
-      <main className="relative min-h-0 flex-1 bg-[#070b12]">
+
+      <main className="relative min-w-0 flex-1 bg-background">
+        <Toolbar
+          running={running}
+          onToggleRunning={handleToggleRunning}
+          onResetSimulation={handleResetSimulation}
+          stats={stats}
+          onExportPng={handleExportPng}
+          onExportSvg={handleExportSvg}
+          onExportMp4={handleExportMp4}
+          exportError={exportError}
+          isExportingMp4={isExportingMp4}
+          onDismissExportError={dismissExportError}
+          hasFrameSelection={hasFrameSelection}
+          selectedFramesCount={selectedFrameIndices.length}
+        />
+
         <CanvasView
           key={`${boundsPx.width}-${boundsPx.height}-${gridLayout.rows}-${gridLayout.cols}`}
           simulationRef={simulationRef}
@@ -802,6 +835,16 @@ export default function App() {
           canvasRef={canvasRef}
         />
       </main>
+
+      <aside className="h-full shrink-0 z-10">
+        <RightSidebar
+          frames={frames}
+          selectedFrameIndices={selectedFrameIndices}
+          onUpdateSelectedFrames={updateSelectedFrames}
+          onRegenerateObstacles={handleRegenerateObstacles}
+          unit={paper.unit}
+        />
+      </aside>
     </div>
   );
 }
@@ -877,7 +920,11 @@ function resizeFrames(
   return next;
 }
 
-function reorderArray<T>(items: T[], startIndex: number, endIndex: number): T[] {
+function reorderArray<T>(
+  items: T[],
+  startIndex: number,
+  endIndex: number,
+): T[] {
   if (!items.length) return items;
   if (
     startIndex < 0 ||
@@ -893,7 +940,11 @@ function reorderArray<T>(items: T[], startIndex: number, endIndex: number): T[] 
   return next;
 }
 
-function remapSelectionForMove(selection: number[], from: number, to: number): number[] {
+function remapSelectionForMove(
+  selection: number[],
+  from: number,
+  to: number,
+): number[] {
   if (!selection.length || from === to) return selection;
   const next: number[] = [];
   const seen = new Set<number>();
