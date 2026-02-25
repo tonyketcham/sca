@@ -121,8 +121,8 @@ export default function ControlsPanel({
   const modalRef = useRef<HTMLDivElement | null>(null);
   const defaultSections: Record<SectionKey, boolean> = {
     simulation: true,
-    template: true,
-    paper: false,
+    template: false,
+    paper: true,
     obstacles: false,
     rendering: false,
     export: false,
@@ -130,7 +130,7 @@ export default function ControlsPanel({
   };
   const [openSections, setOpenSections] = useUiContextState<
     Record<SectionKey, boolean>
-  >('controlsPanel.sections', defaultSections, {
+  >('controlsPanel.sections.v2', defaultSections, {
     merge: (stored) => ({ ...defaultSections, ...(stored ?? {}) }),
   });
 
@@ -148,11 +148,8 @@ export default function ControlsPanel({
     ? 'Project Inspector'
     : 'Layer Inspector';
   const inspectorDescription = showProjectControls
-    ? 'Template, paper, and saved project settings.'
-    : `${selectedFrames.length === 1 ? '1 layer selected' : `${selectedFrames.length} layers selected`}. Simulation, obstacle, and render controls.`;
-  const inspectorModeLabel = showProjectControls
-    ? 'Project'
-    : `${selectedFrames.length} ${selectedFrames.length === 1 ? 'Layer' : 'Layers'}`;
+    ? 'Paper is prioritized. Layout, export, and archive tools are secondary.'
+    : 'Tune simulation live on canvas. Advanced controls stay collapsed.';
   const controlsIdPrefix = useId();
   const fieldId = useCallback(
     (name: string): string => `${controlsIdPrefix}-${name}`,
@@ -435,26 +432,41 @@ export default function ControlsPanel({
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
           <header className="space-y-1 rounded-sm border border-slate-500/25 bg-slate-950/55 px-3 py-2.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <h1 className="text-sm font-semibold tracking-[0.02em] text-slate-100">
-                  {inspectorTitle}
-                </h1>
-                <p className="text-[11px] text-slate-400">
-                  {inspectorDescription}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-sm border border-slate-500/35 bg-slate-900/70 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.1em] text-slate-300">
-                {inspectorModeLabel}
-              </span>
+            <div className="space-y-1">
+              <h1 className="text-sm font-semibold tracking-[0.02em] text-slate-100">
+                {inspectorTitle}
+              </h1>
+              <p className="text-[11px] text-slate-400">{inspectorDescription}</p>
             </div>
           </header>
-          <div className="-mx-4 divide-y divide-slate-500/20 border-y border-slate-500/20">
+          <div className="-mx-4 flex flex-col divide-y divide-slate-500/20 border-y border-slate-500/20">
             {hasFrameSelection ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Simulation', 'simulation')}
+              <section className="order-10 space-y-3 px-4 py-3">
+                {renderSectionHeader('Simulation', 'simulation', 'Primary controls')}
                 {openSections.simulation ? (
                   <div id="section-simulation" className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 rounded-sm border border-blue-300/30 bg-blue-300/8 px-2 py-2">
+                      <Button
+                        onClick={onToggleRunning}
+                        variant="default"
+                        size="compact"
+                      >
+                        {running ? 'Pause' : 'Run'}
+                      </Button>
+                      <Button
+                        onClick={onResetSimulation}
+                        variant="secondary"
+                        size="compact"
+                      >
+                        Reset
+                      </Button>
+                      <div className="ml-auto grid min-w-[180px] grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] uppercase tracking-[0.08em] text-slate-300">
+                        <span>Nodes {stats.nodes}</span>
+                        <span>Attractors {stats.attractors}</span>
+                        <span>Iterations {stats.iterations}</span>
+                        <span>{stats.completed ? 'Complete' : 'Growing'}</span>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('sim-influence-radius')}>
@@ -559,163 +571,6 @@ export default function ControlsPanel({
                           }
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={fieldId('sim-steps-per-frame')}>
-                          Steps per frame
-                        </Label>
-                        <ScrubbableNumberInput
-                          id={fieldId('sim-steps-per-frame')}
-                          min={1}
-                          integer
-                          value={mixedParams?.stepsPerFrame ?? null}
-                          placeholder={
-                            mixedParams?.stepsPerFrame === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              params: { ...frame.params, stepsPerFrame: next },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={fieldId('sim-seed-count')}>
-                          Seed count
-                        </Label>
-                        <ScrubbableNumberInput
-                          id={fieldId('sim-seed-count')}
-                          min={1}
-                          integer
-                          value={mixedParams?.seedCount ?? null}
-                          placeholder={
-                            mixedParams?.seedCount === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              params: { ...frame.params, seedCount: next },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={fieldId('sim-seed-spread')}>
-                          Seed spread (%)
-                        </Label>
-                        <ScrubbableNumberInput
-                          id={fieldId('sim-seed-spread')}
-                          min={0}
-                          max={100}
-                          integer
-                          value={mixedParams?.seedSpread ?? null}
-                          placeholder={
-                            mixedParams?.seedSpread === null
-                              ? 'Mixed'
-                              : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              params: { ...frame.params, seedSpread: next },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={fieldId('sim-seed-placement')}>
-                          Seed placement
-                        </Label>
-                        <Select
-                          value={mixedParams?.seedPlacement ?? undefined}
-                          onValueChange={(value) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              params: {
-                                ...frame.params,
-                                seedPlacement:
-                                  value as SimulationParams['seedPlacement'],
-                              },
-                            }))
-                          }
-                        >
-                          <SelectTrigger id={fieldId('sim-seed-placement')}>
-                            <SelectValue
-                              placeholder={
-                                mixedParams?.seedPlacement ? undefined : 'Mixed'
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="edge">Edge line</SelectItem>
-                            <SelectItem value="scatter">Scatter</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {mixedParams?.seedPlacement === 'edge' ? (
-                        <>
-                          <div className="space-y-1">
-                            <Label htmlFor={fieldId('sim-seed-edge')}>
-                              Seed edge
-                            </Label>
-                            <Select
-                              value={mixedParams?.seedEdge ?? undefined}
-                              onValueChange={(value) =>
-                                onUpdateSelectedFrames((frame) => ({
-                                  ...frame,
-                                  params: {
-                                    ...frame.params,
-                                    seedEdge:
-                                      value as SimulationParams['seedEdge'],
-                                  },
-                                }))
-                              }
-                            >
-                              <SelectTrigger id={fieldId('sim-seed-edge')}>
-                                <SelectValue
-                                  placeholder={
-                                    mixedParams?.seedEdge ? undefined : 'Mixed'
-                                  }
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="top">Top</SelectItem>
-                                <SelectItem value="bottom">Bottom</SelectItem>
-                                <SelectItem value="left">Left</SelectItem>
-                                <SelectItem value="right">Right</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor={fieldId('sim-seed-angle')}>
-                              Seed angle (deg)
-                            </Label>
-                            <ScrubbableNumberInput
-                              id={fieldId('sim-seed-angle')}
-                              min={-180}
-                              max={180}
-                              step={1}
-                              integer
-                              value={mixedParams?.seedAngle ?? null}
-                              placeholder={
-                                mixedParams?.seedAngle === null
-                                  ? 'Mixed'
-                                  : undefined
-                              }
-                              onValueChange={(next) =>
-                                onUpdateSelectedFrames((frame) => ({
-                                  ...frame,
-                                  params: { ...frame.params, seedAngle: next },
-                                }))
-                              }
-                            />
-                          </div>
-                        </>
-                      ) : null}
                     </div>
                     <div className={controlRowVariants()}>
                       <div>
@@ -745,92 +600,237 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        onClick={onToggleRunning}
-                        variant="default"
-                        size="compact"
-                      >
-                        {running ? 'Pause' : 'Run'}
-                      </Button>
-                      <Button
-                        onClick={onResetSimulation}
-                        variant="secondary"
-                        size="compact"
-                      >
-                        Reset growth
-                      </Button>
-                    </div>
-                    <div className="grid gap-2">
-                      <div className={controlRowVariants()}>
-                        <div>
-                          <Label
-                            htmlFor={fieldId('sim-randomize-seed')}
-                            className="text-xs text-slate-100"
-                          >
-                            Randomize seed
+                    <details className="group rounded-sm border border-slate-500/25 bg-slate-900/35 px-2 py-1.5">
+                      <summary className="cursor-pointer list-none text-[11px] font-medium text-slate-300">
+                        Distribution + stepping
+                      </summary>
+                      <div className="mt-2 grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label htmlFor={fieldId('sim-steps-per-frame')}>
+                            Steps per frame
                           </Label>
-                          <div className="text-xs text-slate-400">
-                            {mixedSeed?.randomizeSeed === null
-                              ? 'Mixed'
-                              : 'Generate a new seed on reset.'}
-                          </div>
-                        </div>
-                        <Switch
-                          id={fieldId('sim-randomize-seed')}
-                          checked={mixedSeed?.randomizeSeed ?? false}
-                          onCheckedChange={(checked) =>
-                            onUpdateSelectedFrames((frame) => ({
-                              ...frame,
-                              randomizeSeed: checked,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={fieldId('sim-seed')}>Seed</Label>
-                        <ScrubbableNumberInput
-                          id={fieldId('sim-seed')}
-                          min={0}
-                          integer
-                          value={mixedSeed?.seed ?? null}
-                          placeholder={
-                            mixedSeed?.seed === null ? 'Mixed' : undefined
-                          }
-                          onValueChange={(next) =>
-                            onUpdateSelectedFrames(
-                              (frame) => ({
+                          <ScrubbableNumberInput
+                            id={fieldId('sim-steps-per-frame')}
+                            min={1}
+                            integer
+                            value={mixedParams?.stepsPerFrame ?? null}
+                            placeholder={
+                              mixedParams?.stepsPerFrame === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
                                 ...frame,
-                                seed: next,
-                              }),
-                              { rebuildSimulation: true, seedOverride: next },
-                            )
-                          }
-                          disabled={mixedSeed?.randomizeSeed === true}
-                          className={
-                            mixedSeed?.randomizeSeed === true
-                              ? 'opacity-60'
-                              : undefined
-                          }
-                        />
+                                params: { ...frame.params, stepsPerFrame: next },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={fieldId('sim-seed-count')}>
+                            Seed count
+                          </Label>
+                          <ScrubbableNumberInput
+                            id={fieldId('sim-seed-count')}
+                            min={1}
+                            integer
+                            value={mixedParams?.seedCount ?? null}
+                            placeholder={
+                              mixedParams?.seedCount === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                params: { ...frame.params, seedCount: next },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={fieldId('sim-seed-spread')}>
+                            Seed spread (%)
+                          </Label>
+                          <ScrubbableNumberInput
+                            id={fieldId('sim-seed-spread')}
+                            min={0}
+                            max={100}
+                            integer
+                            value={mixedParams?.seedSpread ?? null}
+                            placeholder={
+                              mixedParams?.seedSpread === null
+                                ? 'Mixed'
+                                : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                params: { ...frame.params, seedSpread: next },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={fieldId('sim-seed-placement')}>
+                            Seed placement
+                          </Label>
+                          <Select
+                            value={mixedParams?.seedPlacement ?? undefined}
+                            onValueChange={(value) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                params: {
+                                  ...frame.params,
+                                  seedPlacement:
+                                    value as SimulationParams['seedPlacement'],
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger id={fieldId('sim-seed-placement')}>
+                              <SelectValue
+                                placeholder={
+                                  mixedParams?.seedPlacement ? undefined : 'Mixed'
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="edge">Edge line</SelectItem>
+                              <SelectItem value="scatter">Scatter</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {mixedParams?.seedPlacement === 'edge' ? (
+                          <>
+                            <div className="space-y-1">
+                              <Label htmlFor={fieldId('sim-seed-edge')}>
+                                Seed edge
+                              </Label>
+                              <Select
+                                value={mixedParams?.seedEdge ?? undefined}
+                                onValueChange={(value) =>
+                                  onUpdateSelectedFrames((frame) => ({
+                                    ...frame,
+                                    params: {
+                                      ...frame.params,
+                                      seedEdge:
+                                        value as SimulationParams['seedEdge'],
+                                    },
+                                  }))
+                                }
+                              >
+                                <SelectTrigger id={fieldId('sim-seed-edge')}>
+                                  <SelectValue
+                                    placeholder={
+                                      mixedParams?.seedEdge ? undefined : 'Mixed'
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="top">Top</SelectItem>
+                                  <SelectItem value="bottom">Bottom</SelectItem>
+                                  <SelectItem value="left">Left</SelectItem>
+                                  <SelectItem value="right">Right</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label htmlFor={fieldId('sim-seed-angle')}>
+                                Seed angle (deg)
+                              </Label>
+                              <ScrubbableNumberInput
+                                id={fieldId('sim-seed-angle')}
+                                min={-180}
+                                max={180}
+                                step={1}
+                                integer
+                                value={mixedParams?.seedAngle ?? null}
+                                placeholder={
+                                  mixedParams?.seedAngle === null
+                                    ? 'Mixed'
+                                    : undefined
+                                }
+                                onValueChange={(next) =>
+                                  onUpdateSelectedFrames((frame) => ({
+                                    ...frame,
+                                    params: { ...frame.params, seedAngle: next },
+                                  }))
+                                }
+                              />
+                            </div>
+                          </>
+                        ) : null}
                       </div>
-                    </div>
-                    <div className="grid gap-1 text-xs text-slate-400">
-                      <div>Nodes: {stats.nodes}</div>
-                      <div>Attractors: {stats.attractors}</div>
-                      <div>Iterations: {stats.iterations}</div>
-                      <div>
-                        Status: {stats.completed ? 'Complete' : 'Growing'}
+                    </details>
+                    <details className="group rounded-sm border border-slate-500/25 bg-slate-900/35 px-2 py-1.5">
+                      <summary className="cursor-pointer list-none text-[11px] font-medium text-slate-300">
+                        Seed + reset behavior
+                      </summary>
+                      <div className="mt-2 grid gap-2">
+                        <div className={controlRowVariants()}>
+                          <div>
+                            <Label
+                              htmlFor={fieldId('sim-randomize-seed')}
+                              className="text-xs text-slate-100"
+                            >
+                              Randomize seed
+                            </Label>
+                            <div className="text-xs text-slate-400">
+                              {mixedSeed?.randomizeSeed === null
+                                ? 'Mixed'
+                                : 'Generate a new seed on reset.'}
+                            </div>
+                          </div>
+                          <Switch
+                            id={fieldId('sim-randomize-seed')}
+                            checked={mixedSeed?.randomizeSeed ?? false}
+                            onCheckedChange={(checked) =>
+                              onUpdateSelectedFrames((frame) => ({
+                                ...frame,
+                                randomizeSeed: checked,
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={fieldId('sim-seed')}>Seed</Label>
+                          <ScrubbableNumberInput
+                            id={fieldId('sim-seed')}
+                            min={0}
+                            integer
+                            value={mixedSeed?.seed ?? null}
+                            placeholder={
+                              mixedSeed?.seed === null ? 'Mixed' : undefined
+                            }
+                            onValueChange={(next) =>
+                              onUpdateSelectedFrames(
+                                (frame) => ({
+                                  ...frame,
+                                  seed: next,
+                                }),
+                                { rebuildSimulation: true, seedOverride: next },
+                              )
+                            }
+                            disabled={mixedSeed?.randomizeSeed === true}
+                            className={
+                              mixedSeed?.randomizeSeed === true
+                                ? 'opacity-60'
+                                : undefined
+                            }
+                          />
+                        </div>
                       </div>
-                    </div>
+                    </details>
                   </div>
                 ) : null}
               </section>
             ) : null}
 
             {showProjectControls ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Template Grid', 'template')}
+              <section className="order-30 space-y-3 px-4 py-3">
+                {renderSectionHeader('Template Grid', 'template', 'Advanced layout')}
                 {openSections.template ? (
                   <div id="section-template" className="space-y-3">
                     <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
@@ -936,8 +936,8 @@ export default function ControlsPanel({
             ) : null}
 
             {showProjectControls ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Paper', 'paper')}
+              <section className="order-20 space-y-3 px-4 py-3">
+                {renderSectionHeader('Paper', 'paper', 'Project baseline')}
                 {openSections.paper ? (
                   <div id="section-paper" className="space-y-3">
                     <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
@@ -1007,8 +1007,8 @@ export default function ControlsPanel({
             ) : null}
 
             {hasFrameSelection ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Obstacles', 'obstacles')}
+              <section className="order-20 space-y-3 px-4 py-3">
+                {renderSectionHeader('Obstacles', 'obstacles', 'Advanced')}
                 {openSections.obstacles ? (
                   <div id="section-obstacles" className="space-y-3">
                     <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
@@ -1186,8 +1186,8 @@ export default function ControlsPanel({
             ) : null}
 
             {hasFrameSelection ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Rendering', 'rendering')}
+              <section className="order-30 space-y-3 px-4 py-3">
+                {renderSectionHeader('Rendering', 'rendering', 'Advanced')}
                 {openSections.rendering ? (
                   <div id="section-rendering" className="space-y-3">
                     <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
@@ -1404,8 +1404,8 @@ export default function ControlsPanel({
               </section>
             ) : null}
 
-            <section className="space-y-3 px-4 py-3">
-              {renderSectionHeader('Export', 'export')}
+            <section className="order-40 space-y-3 px-4 py-3">
+              {renderSectionHeader('Export', 'export', 'Output')}
               {openSections.export ? (
                 <div id="section-export" className="space-y-3">
                   {hasFrameSelection ? (
@@ -1566,7 +1566,7 @@ export default function ControlsPanel({
                     </Button>
                     <Button
                       onClick={onExportMp4}
-                      variant="default"
+                      variant="secondary"
                       size="compact"
                       disabled={isExportingMp4}
                       aria-busy={isExportingMp4}
@@ -1579,13 +1579,12 @@ export default function ControlsPanel({
             </section>
 
             {showProjectControls ? (
-              <section className="space-y-3 px-4 py-3">
-                {renderSectionHeader('Saved Runs', 'saved')}
+              <section className="order-50 space-y-3 px-4 py-3">
+                {renderSectionHeader('Saved Runs', 'saved', 'Archive')}
                 {openSections.saved ? (
                   <div id="section-saved" className="space-y-2">
                     <div className="text-xs text-slate-400">
-                      Open saved runs in a stable popout to preview without panel
-                      layout shifts.
+                      Browse, preview, and restore saved runs.
                     </div>
                     <Button
                       variant="secondary"
