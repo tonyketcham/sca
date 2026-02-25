@@ -78,6 +78,9 @@ const FOCUSABLE_SELECTOR = [
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
+const CONTROL_ROW_CLASS =
+  'flex items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/50 px-2.5 py-2 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/70 motion-reduce:transition-none';
+const COMPACT_BUTTON_CLASS = 'h-8 px-2.5 text-xs';
 
 export default function ControlsPanel({
   paper,
@@ -389,14 +392,14 @@ export default function ControlsPanel({
         className="group flex w-full items-center justify-between gap-2 rounded-lg border border-transparent px-2 py-2 text-left transition-colors duration-200 ease-out hover:bg-zinc-900/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500/70 motion-reduce:transition-none"
       >
         <div className="space-y-0.5">
-          <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-200">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100">
             {title}
           </h2>
           {description ? (
-            <div className="text-[10px] text-zinc-500">{description}</div>
+            <div className="text-xs text-zinc-400">{description}</div>
           ) : null}
         </div>
-        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950/60 text-[10px] text-zinc-400 transition-colors duration-200 ease-out group-hover:border-zinc-700 group-hover:text-zinc-200 motion-reduce:transition-none">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-800 bg-zinc-950/60 text-xs text-zinc-400 transition-colors duration-200 ease-out group-hover:border-zinc-700 group-hover:text-zinc-200 motion-reduce:transition-none">
           <span
             className={`transition-transform duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
               isOpen ? 'rotate-90' : ''
@@ -410,7 +413,7 @@ export default function ControlsPanel({
   };
 
   return (
-    <div className="relative flex h-full flex-col bg-zinc-950/30 text-[11px] text-zinc-300">
+    <div className="relative flex h-full flex-col bg-zinc-950/30 text-sm text-zinc-200">
       <LayersPanel
         frames={frames}
         templateGrid={templateGrid}
@@ -425,8 +428,8 @@ export default function ControlsPanel({
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
           <header className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/40 px-3 py-2">
-            <h1 className="text-[13px] font-semibold text-white">SCA Editor</h1>
-            <p className="text-[11px] text-zinc-400">
+            <h1 className="text-base font-semibold text-zinc-100">SCA Editor</h1>
+            <p className="text-xs text-zinc-400">
               Space colonization growth with real-time parameter control.
             </p>
           </header>
@@ -436,7 +439,7 @@ export default function ControlsPanel({
                 {renderSectionHeader('Simulation', 'simulation')}
                 {openSections.simulation ? (
                   <div id="section-simulation" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('sim-influence-radius')}>
                           Influence radius
@@ -698,15 +701,15 @@ export default function ControlsPanel({
                         </>
                       ) : null}
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                    <div className={CONTROL_ROW_CLASS}>
                       <div>
                         <Label
                           htmlFor={fieldId('sim-avoid-obstacles')}
-                          className="text-[11px] text-zinc-200"
+                          className="text-xs text-zinc-100"
                         >
                           Avoid obstacles
                         </Label>
-                        <div className="text-[10px] text-zinc-500">
+                        <div className="text-xs text-zinc-400">
                           {mixedParams?.avoidObstacles === null
                             ? 'Mixed'
                             : 'Block growth inside polygons.'}
@@ -731,7 +734,7 @@ export default function ControlsPanel({
                         onClick={onToggleRunning}
                         variant="default"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
+                        className={COMPACT_BUTTON_CLASS}
                       >
                         {running ? 'Pause' : 'Run'}
                       </Button>
@@ -739,21 +742,21 @@ export default function ControlsPanel({
                         onClick={onResetSimulation}
                         variant="secondary"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
+                        className={COMPACT_BUTTON_CLASS}
                       >
                         Reset growth
                       </Button>
                     </div>
                     <div className="grid gap-2">
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                      <div className={CONTROL_ROW_CLASS}>
                         <div>
                           <Label
                             htmlFor={fieldId('sim-randomize-seed')}
-                            className="text-[11px] text-zinc-200"
+                            className="text-xs text-zinc-100"
                           >
                             Randomize seed
                           </Label>
-                          <div className="text-[10px] text-zinc-500">
+                          <div className="text-xs text-zinc-400">
                             {mixedSeed?.randomizeSeed === null
                               ? 'Mixed'
                               : 'Generate a new seed on reset.'}
@@ -798,7 +801,7 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className="grid gap-1 text-[10px] text-zinc-500">
+                    <div className="grid gap-1 text-xs text-zinc-400">
                       <div>Nodes: {stats.nodes}</div>
                       <div>Attractors: {stats.attractors}</div>
                       <div>Iterations: {stats.iterations}</div>
@@ -816,7 +819,7 @@ export default function ControlsPanel({
                 {renderSectionHeader('Template Grid', 'template')}
                 {openSections.template ? (
                   <div id="section-template" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('template-rows')}>Rows</Label>
                         <ScrubbableNumberInput
@@ -866,15 +869,15 @@ export default function ControlsPanel({
                       </div>
                     </div>
                     <div className="grid gap-2">
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                      <div className={CONTROL_ROW_CLASS}>
                         <div>
                           <Label
                             htmlFor={fieldId('template-show-gutter')}
-                            className="text-[11px] text-zinc-200"
+                            className="text-xs text-zinc-100"
                           >
                             Show gutter
                           </Label>
-                          <div className="text-[10px] text-zinc-500">
+                          <div className="text-xs text-zinc-400">
                             Display grid margins in the editor.
                           </div>
                         </div>
@@ -889,15 +892,15 @@ export default function ControlsPanel({
                           }
                         />
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                      <div className={CONTROL_ROW_CLASS}>
                         <div>
                           <Label
                             htmlFor={fieldId('template-gutter-obstacles')}
-                            className="text-[11px] text-zinc-200"
+                            className="text-xs text-zinc-100"
                           >
                             Gutter as obstacles
                           </Label>
-                          <div className="text-[10px] text-zinc-500">
+                          <div className="text-xs text-zinc-400">
                             Prevent growth inside the gutter margins.
                           </div>
                         </div>
@@ -923,7 +926,7 @@ export default function ControlsPanel({
                 {renderSectionHeader('Paper', 'paper')}
                 {openSections.paper ? (
                   <div id="section-paper" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('paper-width')}>
                           Width ({paper.unit})
@@ -981,7 +984,7 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <p className="text-[10px] text-zinc-500">
+                    <p className="text-xs text-zinc-400">
                       Changing paper size resets the simulation and obstacles.
                     </p>
                   </div>
@@ -994,7 +997,7 @@ export default function ControlsPanel({
                 {renderSectionHeader('Obstacles', 'obstacles')}
                 {openSections.obstacles ? (
                   <div id="section-obstacles" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('obs-count')}>
                           Polygon count
@@ -1160,7 +1163,7 @@ export default function ControlsPanel({
                       onClick={onRegenerateObstacles}
                       variant="secondary"
                       size="sm"
-                      className="h-7 px-2 text-[11px]"
+                      className={COMPACT_BUTTON_CLASS}
                     >
                       Regenerate obstacles
                     </Button>
@@ -1174,7 +1177,7 @@ export default function ControlsPanel({
                 {renderSectionHeader('Rendering', 'rendering')}
                 {openSections.rendering ? (
                   <div id="section-rendering" className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('render-stroke-width')}>
                           Stroke width
@@ -1226,13 +1229,13 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                       <div className="space-y-1">
                         <Label htmlFor={fieldId('render-root-color')}>
                           Root color
                         </Label>
                         {mixedRenderSettings?.rootColor === null ? (
-                          <div className="text-[10px] text-zinc-500">Mixed</div>
+                          <div className="text-xs text-zinc-400">Mixed</div>
                         ) : null}
                         <Input
                           id={fieldId('render-root-color')}
@@ -1255,7 +1258,7 @@ export default function ControlsPanel({
                           Obstacle color
                         </Label>
                         {mixedRenderSettings?.obstacleFill === null ? (
-                          <div className="text-[10px] text-zinc-500">Mixed</div>
+                          <div className="text-xs text-zinc-400">Mixed</div>
                         ) : null}
                         <Input
                           id={fieldId('render-obstacle-color')}
@@ -1278,7 +1281,7 @@ export default function ControlsPanel({
                           Attractor color
                         </Label>
                         {mixedRenderSettings?.attractorColor === null ? (
-                          <div className="text-[10px] text-zinc-500">Mixed</div>
+                          <div className="text-xs text-zinc-400">Mixed</div>
                         ) : null}
                         <Input
                           id={fieldId('render-attractor-color')}
@@ -1299,15 +1302,15 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                    <div className={CONTROL_ROW_CLASS}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-obstacles')}
-                          className="text-[11px] text-zinc-200"
+                          className="text-xs text-zinc-100"
                         >
                           Show obstacles
                         </Label>
-                        <div className="text-[10px] text-zinc-500">
+                        <div className="text-xs text-zinc-400">
                           {mixedRenderSettings?.showObstacles === null
                             ? 'Mixed'
                             : 'Hide polygons in view + exports.'}
@@ -1327,15 +1330,15 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                    <div className={CONTROL_ROW_CLASS}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-attractors')}
-                          className="text-[11px] text-zinc-200"
+                          className="text-xs text-zinc-100"
                         >
                           Show attractors
                         </Label>
-                        <div className="text-[10px] text-zinc-500">
+                        <div className="text-xs text-zinc-400">
                           {mixedRenderSettings?.showAttractors === null
                             ? 'Mixed'
                             : 'Reveal growth targets.'}
@@ -1355,15 +1358,15 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                    <div className={CONTROL_ROW_CLASS}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-nodes')}
-                          className="text-[11px] text-zinc-200"
+                          className="text-xs text-zinc-100"
                         >
                           Show nodes
                         </Label>
-                        <div className="text-[10px] text-zinc-500">
+                        <div className="text-xs text-zinc-400">
                           {mixedRenderSettings?.showNodes === null
                             ? 'Mixed'
                             : 'Draw node points along roots.'}
@@ -1394,7 +1397,7 @@ export default function ControlsPanel({
                 <div id="section-export" className="space-y-3">
                   {hasFrameSelection ? (
                     <>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-2">
                         <div className="space-y-1">
                           <Label htmlFor={fieldId('export-fps')}>MP4 FPS</Label>
                           <ScrubbableNumberInput
@@ -1481,15 +1484,15 @@ export default function ControlsPanel({
                           />
                         </div>
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950/60 px-2 py-1.5 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 motion-reduce:transition-none">
+                      <div className={CONTROL_ROW_CLASS}>
                         <div>
                           <Label
                             htmlFor={fieldId('export-auto-duration')}
-                            className="text-[11px] text-zinc-200"
+                            className="text-xs text-zinc-100"
                           >
                             Auto duration
                           </Label>
-                          <div className="text-[10px] text-zinc-500">
+                          <div className="text-xs text-zinc-400">
                             {mixedExportSettings?.durationMode === null
                               ? 'Mixed'
                               : 'Stop when growth completes.'}
@@ -1513,7 +1516,7 @@ export default function ControlsPanel({
                       </div>
                     </>
                   ) : null}
-                  <div className="text-[10px] text-zinc-500">
+                  <div className="text-xs text-zinc-400">
                     {hasFrameSelection
                       ? `Exports ${selectedFrames.length === 1 ? 'selected frame' : `${selectedFrames.length} selected frames`}`
                       : 'Exports entire project'}
@@ -1521,13 +1524,13 @@ export default function ControlsPanel({
                   {exportError ? (
                     <div
                       role="alert"
-                      className="flex items-start justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-[11px] text-red-100"
+                      className="flex items-start justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-xs text-red-100"
                     >
                       <div className="min-w-0 flex-1 break-words">{exportError}</div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
+                        className={COMPACT_BUTTON_CLASS}
                         onClick={onDismissExportError}
                       >
                         Dismiss
@@ -1539,7 +1542,7 @@ export default function ControlsPanel({
                       onClick={onExportPng}
                       variant="secondary"
                       size="sm"
-                      className="h-7 px-2"
+                      className={COMPACT_BUTTON_CLASS}
                     >
                       Export PNG
                     </Button>
@@ -1547,7 +1550,7 @@ export default function ControlsPanel({
                       onClick={onExportSvg}
                       variant="secondary"
                       size="sm"
-                      className="h-7 px-2"
+                      className={COMPACT_BUTTON_CLASS}
                     >
                       Export SVG
                     </Button>
@@ -1555,7 +1558,7 @@ export default function ControlsPanel({
                       onClick={onExportMp4}
                       variant="default"
                       size="sm"
-                      className="h-7 px-2"
+                      className={COMPACT_BUTTON_CLASS}
                       disabled={isExportingMp4}
                       aria-busy={isExportingMp4}
                     >
@@ -1571,14 +1574,14 @@ export default function ControlsPanel({
                 {renderSectionHeader('Saved Runs', 'saved')}
                 {openSections.saved ? (
                   <div id="section-saved" className="space-y-2">
-                    <div className="text-[10px] text-zinc-500">
+                    <div className="text-xs text-zinc-400">
                       Open saved runs in a stable popout to preview without panel
                       layout shifts.
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-7 px-2 text-[11px]"
+                      className={COMPACT_BUTTON_CLASS}
                       onClick={() => setIsSavedRunsModalOpen(true)}
                     >
                       Open saved runs ({formattedSavedEntryCount})
@@ -1612,11 +1615,11 @@ export default function ControlsPanel({
               <div className="min-w-0">
                 <h2
                   id={savedRunsTitleId}
-                  className="text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-100"
+                  className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100"
                 >
                   Saved Runs
                 </h2>
-                <p id={savedRunsDescriptionId} className="text-[10px] text-zinc-500">
+                <p id={savedRunsDescriptionId} className="text-xs text-zinc-400">
                   Preview entries with hover or keyboard focus. Press Escape to
                   close.
                 </p>
@@ -1624,7 +1627,7 @@ export default function ControlsPanel({
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-7 px-2 text-[11px]"
+                className={COMPACT_BUTTON_CLASS}
                 onClick={closeSavedRunsModal}
               >
                 Close
@@ -1659,14 +1662,14 @@ export default function ControlsPanel({
                       placeholder="New save name"
                       maxLength={MAX_SAVE_NAME_LENGTH}
                     />
-                    <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                    <div className="flex items-center justify-between text-xs text-zinc-400">
                       <span>Optional. Supports emoji and non-Latin text.</span>
                       <span>{saveName.length}/{MAX_SAVE_NAME_LENGTH}</span>
                     </div>
                     <Button
                       variant="secondary"
                       size="sm"
-                      className="h-7 px-2 text-[11px]"
+                      className={COMPACT_BUTTON_CLASS}
                       onClick={handleSaveCurrent}
                     >
                       Save current
@@ -1675,7 +1678,7 @@ export default function ControlsPanel({
 
                   <div className="space-y-2">
                     {savedEntries.length === 0 ? (
-                      <div className="rounded-md border border-zinc-800 bg-zinc-900/50 p-2 text-[10px] text-zinc-500">
+                      <div className="rounded-md border border-zinc-800 bg-zinc-900/50 p-2 text-xs text-zinc-400">
                         No saved runs yet. Save the current project state to
                         create one.
                       </div>
@@ -1683,19 +1686,19 @@ export default function ControlsPanel({
                       savedEntries.map((entry) => (
                         <div
                           key={entry.id}
-                          className="rounded-md border border-zinc-800 bg-zinc-950/60 p-2 text-[11px] text-zinc-300 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/60 focus-within:border-zinc-600 focus-within:bg-zinc-900/50 motion-reduce:transition-none"
+                          className="rounded-md border border-zinc-800/80 bg-zinc-900/50 p-2 text-xs text-zinc-200 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/70 focus-within:border-zinc-600 focus-within:bg-zinc-900/50 motion-reduce:transition-none"
                           onMouseEnter={() => startPreview(entry.id)}
                           onFocusCapture={() => startPreview(entry.id)}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <div
-                                className="truncate text-[12px] text-zinc-100"
+                                className="truncate text-sm text-zinc-100"
                                 title={entry.name}
                               >
                                 {entry.name}
                               </div>
-                              <div className="truncate text-[10px] text-zinc-500">
+                              <div className="truncate text-xs text-zinc-400">
                                 Seed: {entry.seed}{' '}
                                 {entry.randomizeSeed ? '(random)' : '(fixed)'}
                               </div>
@@ -1708,7 +1711,7 @@ export default function ControlsPanel({
                                     : 'outline'
                                 }
                                 size="sm"
-                                className="h-7 px-2 text-[11px]"
+                                className={COMPACT_BUTTON_CLASS}
                                 onClick={() => {
                                   if (previewedEntryId === entry.id) {
                                     stopPreview();
@@ -1724,7 +1727,7 @@ export default function ControlsPanel({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-7 px-2 text-[11px]"
+                                className={COMPACT_BUTTON_CLASS}
                                 onClick={() => onLoadEntry(entry.id)}
                               >
                                 Load
@@ -1732,7 +1735,7 @@ export default function ControlsPanel({
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="h-7 px-2 text-[11px]"
+                                className={COMPACT_BUTTON_CLASS}
                                 onClick={() => handleDeleteEntry(entry)}
                               >
                                 Delete

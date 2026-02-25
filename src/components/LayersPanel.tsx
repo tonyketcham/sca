@@ -54,27 +54,27 @@ export default function LayersPanel({
   return (
     <section className="space-y-2 border-b border-zinc-800 px-4 py-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-zinc-200">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-zinc-100">
           <Layers className="h-3.5 w-3.5" />
           Layers
         </div>
-        <div className="text-[10px] text-zinc-500">{frames.length} frames</div>
+        <div className="text-xs text-zinc-400">{frames.length} frames</div>
       </div>
-      <div className="max-h-[240px] overflow-hidden rounded-md border border-zinc-800 bg-zinc-950/60">
+      <div className="max-h-[240px] overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/50">
         <ScrollArea className="h-full">
           <div className="space-y-1 p-1">
             <button
               type="button"
               onClick={handleSelectProject}
               className={cn(
-                'flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-left text-[11px] transition',
+                'flex w-full items-center justify-between rounded-md border px-2 py-1.5 text-left text-xs transition',
                 isProjectSelected
                   ? 'border-blue-500/70 bg-blue-500/10 text-blue-200'
                   : 'border-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900'
               )}
             >
               <span className="font-semibold">Project</span>
-              <span className="text-[10px] text-zinc-500">Paper + Grid</span>
+              <span className="text-xs text-zinc-400">Paper + Grid</span>
             </button>
             {frames.map((frame, index) => (
               <FrameLayerRow
@@ -243,7 +243,7 @@ function FrameLayerRow({
         }
       }}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500',
+        'flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500',
         isSelected
           ? 'border-blue-500/70 bg-blue-500/10 text-blue-200'
           : 'border-transparent text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900',
@@ -255,7 +255,7 @@ function FrameLayerRow({
       {isEditing ? (
         <input
           ref={inputRef}
-          className="flex-1 rounded-sm border border-zinc-700 bg-zinc-950 px-1 py-0.5 text-[11px] text-zinc-100 outline-none"
+          className="flex-1 rounded-sm border border-zinc-700 bg-zinc-950 px-1 py-0.5 text-xs text-zinc-100 outline-none"
           value={draftName}
           onChange={(event) =>
             setDraftName(event.target.value.slice(0, MAX_FRAME_NAME_LENGTH))
