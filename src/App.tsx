@@ -66,9 +66,9 @@ const DEFAULT_RENDER: RenderSettings = {
   showObstacles: true,
   strokeWidth: 1.4,
   nodeRadius: 1.5,
-  rootColor: '#2d3b2c',
-  obstacleFill: '#c85e5e',
-  attractorColor: '#2f80ed',
+  rootColor: '#6ea95a',
+  obstacleFill: '#756c64',
+  attractorColor: '#5c84f4',
 };
 
 const DEFAULT_EXPORT: ExportSettings = {

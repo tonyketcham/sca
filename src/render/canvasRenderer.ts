@@ -181,13 +181,7 @@ export function renderComposite(
         left: cell.col > 0,
         right: cell.col < grid.cols - 1,
       };
-      drawGutterOverlay(
-        ctx,
-        state.bounds,
-        grid.gutterPx * 0.5,
-        frame.renderSettings.obstacleFill,
-        edges,
-      );
+      drawGutterOverlay(ctx, state.bounds, grid.gutterPx * 0.5, edges);
     }
 
     if (mode === 'editor') {
@@ -283,7 +277,6 @@ function drawGutterOverlay(
   ctx: CanvasRenderingContext2D,
   bounds: SimulationState['bounds'],
   padding: number,
-  fill: string,
   edges: { top: boolean; bottom: boolean; left: boolean; right: boolean },
 ): void {
   const inset = Math.min(
@@ -315,21 +308,166 @@ function drawGutterOverlay(
   ctx.restore();
 }
 
+type Rgb = {
+  r: number;
+  g: number;
+  b: number;
+};
+
+type PolygonBounds = {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+};
+
+type RockPalette = {
+  highlight: string;
+  base: string;
+  shadow: string;
+  rim: string;
+  facet: string;
+};
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function parseHexColor(color: string): Rgb | null {
+  const short = /^#([0-9a-fA-F]{3})$/.exec(color.trim());
+  if (short) {
+    const [r, g, b] = short[1]
+      .split('')
+      .map((channel) => Number.parseInt(channel + channel, 16));
+    return { r, g, b };
+  }
+
+  const full = /^#([0-9a-fA-F]{6})$/.exec(color.trim());
+  if (!full) return null;
+  return {
+    r: Number.parseInt(full[1].slice(0, 2), 16),
+    g: Number.parseInt(full[1].slice(2, 4), 16),
+    b: Number.parseInt(full[1].slice(4, 6), 16),
+  };
+}
+
+function mixRgb(from: Rgb, to: Rgb, amount: number): Rgb {
+  const t = clamp01(amount);
+  return {
+    r: from.r + (to.r - from.r) * t,
+    g: from.g + (to.g - from.g) * t,
+    b: from.b + (to.b - from.b) * t,
+  };
+}
+
+function rgbToRgba(color: Rgb, alpha = 1): string {
+  return `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${clamp01(alpha)})`;
+}
+
+function createRockPalette(obstacleFill: string): RockPalette {
+  const parsed = parseHexColor(obstacleFill);
+  if (!parsed) {
+    return {
+      highlight: 'rgba(255, 255, 255, 0.2)',
+      base: obstacleFill,
+      shadow: 'rgba(0, 0, 0, 0.35)',
+      rim: 'rgba(0, 0, 0, 0.55)',
+      facet: 'rgba(255, 255, 255, 0.18)',
+    };
+  }
+
+  const warmStone: Rgb = { r: 134, g: 126, b: 118 };
+  const neutralized = mixRgb(parsed, warmStone, 0.35);
+  return {
+    highlight: rgbToRgba(
+      mixRgb(neutralized, { r: 255, g: 255, b: 255 }, 0.24),
+      0.98,
+    ),
+    base: rgbToRgba(neutralized, 0.98),
+    shadow: rgbToRgba(mixRgb(neutralized, { r: 12, g: 12, b: 12 }, 0.4), 0.98),
+    rim: rgbToRgba(mixRgb(neutralized, { r: 0, g: 0, b: 0 }, 0.55), 0.9),
+    facet: rgbToRgba(
+      mixRgb(neutralized, { r: 255, g: 255, b: 255 }, 0.3),
+      0.28,
+    ),
+  };
+}
+
+function tracePolygonPath(
+  ctx: CanvasRenderingContext2D,
+  polygon: Vec2[],
+): void {
+  ctx.beginPath();
+  ctx.moveTo(polygon[0].x, polygon[0].y);
+  for (let i = 1; i < polygon.length; i += 1) {
+    ctx.lineTo(polygon[i].x, polygon[i].y);
+  }
+  ctx.closePath();
+}
+
+function getPolygonBounds(polygon: Vec2[]): PolygonBounds {
+  let minX = polygon[0].x;
+  let minY = polygon[0].y;
+  let maxX = polygon[0].x;
+  let maxY = polygon[0].y;
+  for (let i = 1; i < polygon.length; i += 1) {
+    const point = polygon[i];
+    if (point.x < minX) minX = point.x;
+    if (point.y < minY) minY = point.y;
+    if (point.x > maxX) maxX = point.x;
+    if (point.y > maxY) maxY = point.y;
+  }
+  return { minX, minY, maxX, maxY };
+}
+
 function drawObstacles(
   ctx: CanvasRenderingContext2D,
   state: SimulationState,
   settings: RenderSettings,
 ): void {
-  ctx.fillStyle = settings.obstacleFill;
+  const palette = createRockPalette(settings.obstacleFill);
   for (const polygon of state.obstacles) {
-    if (polygon.length === 0) continue;
-    ctx.beginPath();
-    ctx.moveTo(polygon[0].x, polygon[0].y);
-    for (let i = 1; i < polygon.length; i += 1) {
-      ctx.lineTo(polygon[i].x, polygon[i].y);
-    }
-    ctx.closePath();
+    if (polygon.length < 3) continue;
+    const bounds = getPolygonBounds(polygon);
+    const gradient = ctx.createLinearGradient(
+      bounds.minX,
+      bounds.minY,
+      bounds.maxX,
+      bounds.maxY,
+    );
+    gradient.addColorStop(0, palette.highlight);
+    gradient.addColorStop(0.48, palette.base);
+    gradient.addColorStop(1, palette.shadow);
+
+    tracePolygonPath(ctx, polygon);
+    ctx.fillStyle = gradient;
     ctx.fill();
+
+    ctx.save();
+    tracePolygonPath(ctx, polygon);
+    ctx.clip();
+
+    // Fixed diagonal striations emulate subtle stone facets.
+    const span = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+    const facetStride = Math.max(7, span * 0.18);
+    ctx.strokeStyle = palette.facet;
+    ctx.lineWidth = 0.9;
+    for (
+      let y = bounds.minY - facetStride;
+      y <= bounds.maxY + facetStride;
+      y += facetStride
+    ) {
+      ctx.beginPath();
+      ctx.moveTo(bounds.minX - facetStride, y);
+      ctx.lineTo(bounds.maxX + facetStride, y + facetStride * 0.55);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    tracePolygonPath(ctx, polygon);
+    ctx.strokeStyle = palette.rim;
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
 }
 
