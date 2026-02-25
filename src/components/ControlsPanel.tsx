@@ -22,6 +22,7 @@ import { Switch } from './ui/switch';
 import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
 import { useUiContextState } from '../hooks/useUiContext';
 import { ScrollArea } from './ui/scroll-area';
+import { controlRowVariants } from './ui/control-row';
 import LayersPanel from './LayersPanel';
 
 type ControlsPanelProps = {
@@ -78,9 +79,6 @@ const FOCUSABLE_SELECTOR = [
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
-const CONTROL_ROW_CLASS =
-  'flex items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/50 px-2.5 py-2 transition-colors duration-200 ease-out hover:border-zinc-700 hover:bg-zinc-900/70 motion-reduce:transition-none';
-const COMPACT_BUTTON_CLASS = 'h-8 px-2.5 text-xs';
 
 export default function ControlsPanel({
   paper,
@@ -701,7 +699,7 @@ export default function ControlsPanel({
                         </>
                       ) : null}
                     </div>
-                    <div className={CONTROL_ROW_CLASS}>
+                    <div className={controlRowVariants()}>
                       <div>
                         <Label
                           htmlFor={fieldId('sim-avoid-obstacles')}
@@ -733,22 +731,20 @@ export default function ControlsPanel({
                       <Button
                         onClick={onToggleRunning}
                         variant="default"
-                        size="sm"
-                        className={COMPACT_BUTTON_CLASS}
+                        size="compact"
                       >
                         {running ? 'Pause' : 'Run'}
                       </Button>
                       <Button
                         onClick={onResetSimulation}
                         variant="secondary"
-                        size="sm"
-                        className={COMPACT_BUTTON_CLASS}
+                        size="compact"
                       >
                         Reset growth
                       </Button>
                     </div>
                     <div className="grid gap-2">
-                      <div className={CONTROL_ROW_CLASS}>
+                      <div className={controlRowVariants()}>
                         <div>
                           <Label
                             htmlFor={fieldId('sim-randomize-seed')}
@@ -869,7 +865,7 @@ export default function ControlsPanel({
                       </div>
                     </div>
                     <div className="grid gap-2">
-                      <div className={CONTROL_ROW_CLASS}>
+                      <div className={controlRowVariants()}>
                         <div>
                           <Label
                             htmlFor={fieldId('template-show-gutter')}
@@ -892,7 +888,7 @@ export default function ControlsPanel({
                           }
                         />
                       </div>
-                      <div className={CONTROL_ROW_CLASS}>
+                      <div className={controlRowVariants()}>
                         <div>
                           <Label
                             htmlFor={fieldId('template-gutter-obstacles')}
@@ -1162,8 +1158,7 @@ export default function ControlsPanel({
                     <Button
                       onClick={onRegenerateObstacles}
                       variant="secondary"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                     >
                       Regenerate obstacles
                     </Button>
@@ -1302,7 +1297,7 @@ export default function ControlsPanel({
                         />
                       </div>
                     </div>
-                    <div className={CONTROL_ROW_CLASS}>
+                    <div className={controlRowVariants()}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-obstacles')}
@@ -1330,7 +1325,7 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className={CONTROL_ROW_CLASS}>
+                    <div className={controlRowVariants()}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-attractors')}
@@ -1358,7 +1353,7 @@ export default function ControlsPanel({
                         }
                       />
                     </div>
-                    <div className={CONTROL_ROW_CLASS}>
+                    <div className={controlRowVariants()}>
                       <div>
                         <Label
                           htmlFor={fieldId('render-show-nodes')}
@@ -1484,7 +1479,7 @@ export default function ControlsPanel({
                           />
                         </div>
                       </div>
-                      <div className={CONTROL_ROW_CLASS}>
+                      <div className={controlRowVariants()}>
                         <div>
                           <Label
                             htmlFor={fieldId('export-auto-duration')}
@@ -1529,8 +1524,7 @@ export default function ControlsPanel({
                       <div className="min-w-0 flex-1 break-words">{exportError}</div>
                       <Button
                         variant="outline"
-                        size="sm"
-                        className={COMPACT_BUTTON_CLASS}
+                        size="compact"
                         onClick={onDismissExportError}
                       >
                         Dismiss
@@ -1541,24 +1535,21 @@ export default function ControlsPanel({
                     <Button
                       onClick={onExportPng}
                       variant="secondary"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                     >
                       Export PNG
                     </Button>
                     <Button
                       onClick={onExportSvg}
                       variant="secondary"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                     >
                       Export SVG
                     </Button>
                     <Button
                       onClick={onExportMp4}
                       variant="default"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                       disabled={isExportingMp4}
                       aria-busy={isExportingMp4}
                     >
@@ -1580,8 +1571,7 @@ export default function ControlsPanel({
                     </div>
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                       onClick={() => setIsSavedRunsModalOpen(true)}
                     >
                       Open saved runs ({formattedSavedEntryCount})
@@ -1626,8 +1616,7 @@ export default function ControlsPanel({
               </div>
               <Button
                 variant="secondary"
-                size="sm"
-                className={COMPACT_BUTTON_CLASS}
+                size="compact"
                 onClick={closeSavedRunsModal}
               >
                 Close
@@ -1668,8 +1657,7 @@ export default function ControlsPanel({
                     </div>
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className={COMPACT_BUTTON_CLASS}
+                      size="compact"
                       onClick={handleSaveCurrent}
                     >
                       Save current
@@ -1710,8 +1698,7 @@ export default function ControlsPanel({
                                     ? 'default'
                                     : 'outline'
                                 }
-                                size="sm"
-                                className={COMPACT_BUTTON_CLASS}
+                                size="compact"
                                 onClick={() => {
                                   if (previewedEntryId === entry.id) {
                                     stopPreview();
@@ -1726,16 +1713,14 @@ export default function ControlsPanel({
                               </Button>
                               <Button
                                 variant="outline"
-                                size="sm"
-                                className={COMPACT_BUTTON_CLASS}
+                                size="compact"
                                 onClick={() => onLoadEntry(entry.id)}
                               >
                                 Load
                               </Button>
                               <Button
                                 variant="secondary"
-                                size="sm"
-                                className={COMPACT_BUTTON_CLASS}
+                                size="compact"
                                 onClick={() => handleDeleteEntry(entry)}
                               >
                                 Delete
