@@ -8,6 +8,7 @@ import { GripVertical, Layers } from 'lucide-react';
 import type { FrameConfig, TemplateGridSettings } from '../types/ui';
 import { cn } from '../lib/utils';
 import { ScrollArea } from './ui/scroll-area';
+import { SectionHeading } from './ui/section-heading';
 
 type LayersPanelProps = {
   frames: FrameConfig[];
@@ -59,10 +60,10 @@ export default function LayersPanel({
   return (
     <section className="space-y-3 border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
+        <SectionHeading className="flex items-center gap-2">
           <Layers className="h-3.5 w-3.5" />
           Layers
-        </div>
+        </SectionHeading>
         <div className="text-[11px] tabular-nums text-muted opacity-70">
           {frames.length}/{totalCells} cells
         </div>

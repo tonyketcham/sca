@@ -14,6 +14,10 @@ import { Switch } from './ui/switch';
 import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
 import { ScrollArea } from './ui/scroll-area';
 import { ControlRow } from './ui/control-row';
+import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
+import { SectionHeading } from './ui/section-heading';
+import { InsetPanel } from './ui/inset-panel';
+import { ColorSwatchField } from './ui/color-swatch-field';
 import { Settings2, RefreshCw } from 'lucide-react';
 
 type RightSidebarProps = {
@@ -157,10 +161,8 @@ export default function RightSidebar({
 
   if (!hasFrameSelection) {
     return (
-      <div className="flex h-full w-[280px] min-w-[280px] flex-col border-l border-border bg-surface/50 backdrop-blur-xl text-foreground">
-        <div className="flex items-center h-12 px-4 border-b border-border font-semibold text-[13px] tracking-wide">
-          Inspector
-        </div>
+      <SidebarShell side="right">
+        <SidebarHeader>Inspector</SidebarHeader>
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted">
           <Settings2 className="h-8 w-8 opacity-20 mb-3" />
           <p className="text-[12px]">No frame selected</p>
@@ -168,25 +170,23 @@ export default function RightSidebar({
             Select a frame in the explorer to view its properties.
           </p>
         </div>
-      </div>
+      </SidebarShell>
     );
   }
 
   return (
-    <div className="flex h-full w-[280px] min-w-[280px] flex-col border-l border-border bg-surface/50 backdrop-blur-xl text-foreground">
-      <div className="flex items-center justify-between h-12 px-4 border-b border-border font-semibold text-[13px] tracking-wide">
+    <SidebarShell side="right">
+      <SidebarHeader className="justify-between">
         <span>Inspector</span>
         <span className="text-[10px] font-mono text-muted bg-surface py-0.5 px-2 rounded-full border border-border">
           {selectedFrames.length} selected
         </span>
-      </div>
+      </SidebarHeader>
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           <div className="space-y-4">
-            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-              Simulation Parameters
-            </h3>
+            <SectionHeading>Simulation Parameters</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -322,7 +322,7 @@ export default function RightSidebar({
               </ControlRow>
             </div>
 
-            <div className="p-3 bg-surface/30 rounded-md border border-border/50 space-y-3">
+            <InsetPanel tone="subtle" className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor={fieldId('sim-seed-count')}>Seed Count</Label>
@@ -444,9 +444,9 @@ export default function RightSidebar({
                   </div>
                 </div>
               )}
-            </div>
+            </InsetPanel>
 
-            <div className="p-3 bg-surface/30 rounded-md border border-border/50 space-y-3">
+            <InsetPanel tone="subtle" className="space-y-3">
               <ControlRow
                 tone="default"
                 className="px-0 py-0 bg-transparent border-none hover:bg-transparent"
@@ -490,14 +490,12 @@ export default function RightSidebar({
                   />
                 </div>
               </div>
-            </div>
+            </InsetPanel>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-                Obstacles
-              </h3>
+              <SectionHeading>Obstacles</SectionHeading>
               <Button
                 variant="ghost"
                 size="icon"
@@ -648,9 +646,7 @@ export default function RightSidebar({
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-              Appearance
-            </h3>
+            <SectionHeading>Appearance</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -700,81 +696,45 @@ export default function RightSidebar({
                   }
                 />
               </div>
-              <div className="space-y-1.5 col-span-2 flex items-center gap-3">
-                <div className="relative h-7 w-7 rounded-md overflow-hidden border border-border shadow-sm">
-                  <input
-                    id={fieldId('render-root-color')}
-                    type="color"
-                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
-                    value={mixedRenderSettings?.rootColor ?? '#000000'}
-                    onChange={(e) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        renderSettings: {
-                          ...f.renderSettings,
-                          rootColor: e.target.value,
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <Label
-                  htmlFor={fieldId('render-root-color')}
-                  className="cursor-pointer text-foreground"
-                >
-                  Root Color
-                </Label>
-              </div>
-              <div className="space-y-1.5 col-span-2 flex items-center gap-3">
-                <div className="relative h-7 w-7 rounded-md overflow-hidden border border-border shadow-sm">
-                  <input
-                    id={fieldId('render-obstacle-color')}
-                    type="color"
-                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
-                    value={mixedRenderSettings?.obstacleFill ?? '#000000'}
-                    onChange={(e) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        renderSettings: {
-                          ...f.renderSettings,
-                          obstacleFill: e.target.value,
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <Label
-                  htmlFor={fieldId('render-obstacle-color')}
-                  className="cursor-pointer text-foreground"
-                >
-                  Obstacle Color
-                </Label>
-              </div>
-              <div className="space-y-1.5 col-span-2 flex items-center gap-3">
-                <div className="relative h-7 w-7 rounded-md overflow-hidden border border-border shadow-sm">
-                  <input
-                    id={fieldId('render-attractor-color')}
-                    type="color"
-                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
-                    value={mixedRenderSettings?.attractorColor ?? '#000000'}
-                    onChange={(e) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        renderSettings: {
-                          ...f.renderSettings,
-                          attractorColor: e.target.value,
-                        },
-                      }))
-                    }
-                  />
-                </div>
-                <Label
-                  htmlFor={fieldId('render-attractor-color')}
-                  className="cursor-pointer text-foreground"
-                >
-                  Target Color
-                </Label>
-              </div>
+              <ColorSwatchField
+                id={fieldId('render-root-color')}
+                label="Root Color"
+                value={mixedRenderSettings?.rootColor ?? '#000000'}
+                onValueChange={(value) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: { ...f.renderSettings, rootColor: value },
+                  }))
+                }
+              />
+              <ColorSwatchField
+                id={fieldId('render-obstacle-color')}
+                label="Obstacle Color"
+                value={mixedRenderSettings?.obstacleFill ?? '#000000'}
+                onValueChange={(value) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      obstacleFill: value,
+                    },
+                  }))
+                }
+              />
+              <ColorSwatchField
+                id={fieldId('render-attractor-color')}
+                label="Target Color"
+                value={mixedRenderSettings?.attractorColor ?? '#000000'}
+                onValueChange={(value) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    renderSettings: {
+                      ...f.renderSettings,
+                      attractorColor: value,
+                    },
+                  }))
+                }
+              />
             </div>
 
             <div className="space-y-2 pt-2">
@@ -845,9 +805,7 @@ export default function RightSidebar({
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-              Export Settings
-            </h3>
+            <SectionHeading>Export Settings</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -946,6 +904,6 @@ export default function RightSidebar({
           </div>
         </div>
       </ScrollArea>
-    </div>
+    </SidebarShell>
   );
 }

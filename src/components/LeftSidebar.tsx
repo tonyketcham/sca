@@ -20,6 +20,9 @@ import { Switch } from './ui/switch';
 import { ScrubbableNumberInput } from './ui/scrubbable-number-input';
 import { ScrollArea } from './ui/scroll-area';
 import { ControlRow } from './ui/control-row';
+import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
+import { SectionHeading } from './ui/section-heading';
+import { InsetPanel } from './ui/inset-panel';
 import LayersPanel from './LayersPanel';
 
 type LeftSidebarProps = {
@@ -123,10 +126,8 @@ export default function LeftSidebar({
   );
 
   return (
-    <div className="flex h-full w-[280px] min-w-[280px] flex-col border-r border-border bg-surface/50 backdrop-blur-xl text-foreground">
-      <div className="flex items-center h-12 px-4 border-b border-border font-semibold text-[13px] tracking-wide">
-        Explorer
-      </div>
+    <SidebarShell side="left">
+      <SidebarHeader>Explorer</SidebarHeader>
 
       <div className="flex-none max-h-[50%] flex flex-col">
         <LayersPanel
@@ -147,9 +148,7 @@ export default function LeftSidebar({
           {showProjectControls && (
             <>
               <div className="space-y-4">
-                <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-                  Paper Setup
-                </h3>
+                <SectionHeading>Paper Setup</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor={fieldId('paper-width')}>
@@ -211,9 +210,7 @@ export default function LeftSidebar({
               </div>
 
               <div className="space-y-4">
-                <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-                  Template Grid
-                </h3>
+                <SectionHeading>Template Grid</SectionHeading>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor={fieldId('template-rows')}>Rows</Label>
@@ -296,9 +293,7 @@ export default function LeftSidebar({
 
               <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-mono text-[10px] font-semibold uppercase tracking-widest text-muted">
-                    Saved Runs
-                  </h3>
+                  <SectionHeading>Saved Runs</SectionHeading>
                   <span className="text-[10px] text-muted tabular-nums">
                     {savedEntries.length} items
                   </span>
@@ -313,7 +308,7 @@ export default function LeftSidebar({
 
                 {isSavedRunsModalOpen && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 fade-in duration-300">
-                    <div className="space-y-2 bg-surface/30 p-3 rounded-md border border-border">
+                    <InsetPanel className="space-y-2">
                       <Label htmlFor={fieldId('save-name')}>Name</Label>
                       <Input
                         id={fieldId('save-name')}
@@ -333,7 +328,7 @@ export default function LeftSidebar({
                       >
                         Save current state
                       </Button>
-                    </div>
+                    </InsetPanel>
 
                     <div className="space-y-2">
                       {savedEntries.map((entry) => (
@@ -392,6 +387,6 @@ export default function LeftSidebar({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </SidebarShell>
   );
 }
