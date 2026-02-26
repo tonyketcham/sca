@@ -883,19 +883,29 @@ function normalizeFrames(
   targetLength: number,
 ): FrameConfig[] {
   const safeFrames = Array.isArray(frames) ? frames : [];
-  const normalized = safeFrames.map((frame, index) => ({
-    name:
-      typeof frame?.name === 'string' && frame.name.trim().length > 0
-        ? frame.name
-        : createFrameName(index),
-    params: { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) },
-    obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
-    renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
-    exportSettings: { ...DEFAULT_EXPORT, ...(frame?.exportSettings ?? {}) },
-    seed: Number.isFinite(frame?.seed) ? frame.seed : createSeed(),
-    randomizeSeed:
-      typeof frame?.randomizeSeed === 'boolean' ? frame.randomizeSeed : true,
-  }));
+  const normalized = safeFrames.map((frame, index) => {
+    const params = { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) };
+    return {
+      name:
+        typeof frame?.name === 'string' && frame.name.trim().length > 0
+          ? frame.name
+          : createFrameName(index),
+      params: {
+        ...params,
+        seedRotationStrength: finiteNumber(params.seedRotationStrength, 0),
+        attractorTangentStrength: finiteNumber(
+          params.attractorTangentStrength,
+          0,
+        ),
+      },
+      obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
+      renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
+      exportSettings: { ...DEFAULT_EXPORT, ...(frame?.exportSettings ?? {}) },
+      seed: Number.isFinite(frame?.seed) ? frame.seed : createSeed(),
+      randomizeSeed:
+        typeof frame?.randomizeSeed === 'boolean' ? frame.randomizeSeed : true,
+    };
+  });
   if (normalized.length >= targetLength) {
     return normalized.slice(0, Math.max(1, targetLength));
   }
@@ -1014,4 +1024,9 @@ function createGutterObstacles(
     ]);
   }
   return polygons;
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
