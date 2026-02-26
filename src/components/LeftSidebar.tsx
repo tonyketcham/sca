@@ -153,6 +153,7 @@ export default function LeftSidebar({
                     id={fieldId('paper-width')}
                     label={`Width (${paper.unit})`}
                     min={1}
+                    coarseness="coarse"
                     value={paper.width}
                     onValueChange={(next) =>
                       onPaperChange({ ...paper, width: next })
@@ -162,6 +163,7 @@ export default function LeftSidebar({
                     id={fieldId('paper-height')}
                     label={`Height (${paper.unit})`}
                     min={1}
+                    coarseness="coarse"
                     value={paper.height}
                     onValueChange={(next) =>
                       onPaperChange({ ...paper, height: next })
@@ -189,6 +191,7 @@ export default function LeftSidebar({
                     label="DPI"
                     min={36}
                     integer
+                    coarseness="coarse"
                     value={paper.dpi}
                     onValueChange={(next) =>
                       onPaperChange({ ...paper, dpi: next })
@@ -205,6 +208,7 @@ export default function LeftSidebar({
                     label="Rows"
                     min={1}
                     integer
+                    coarseness="coarse"
                     value={templateGrid.rows}
                     onValueChange={(next) =>
                       onTemplateGridChange({ ...templateGrid, rows: next })
@@ -215,6 +219,7 @@ export default function LeftSidebar({
                     label="Columns"
                     min={1}
                     integer
+                    coarseness="coarse"
                     value={templateGrid.cols}
                     onValueChange={(next) =>
                       onTemplateGridChange({ ...templateGrid, cols: next })
@@ -226,6 +231,7 @@ export default function LeftSidebar({
                     className="col-span-2"
                     min={0}
                     step={0.1}
+                    coarseness="fine"
                     value={templateGrid.gutter}
                     onValueChange={(next) =>
                       onTemplateGridChange({ ...templateGrid, gutter: next })

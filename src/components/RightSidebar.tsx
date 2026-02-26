@@ -193,6 +193,7 @@ export default function RightSidebar({
                 label="Influence"
                 min={5}
                 integer
+                coarseness="coarse"
                 value={mixedParams?.influenceRadius ?? null}
                 placeholder={
                   mixedParams?.influenceRadius === null ? 'Mixed' : undefined
@@ -209,6 +210,7 @@ export default function RightSidebar({
                 label="Kill Radius"
                 min={1}
                 integer
+                coarseness="fine"
                 value={mixedParams?.killRadius ?? null}
                 placeholder={
                   mixedParams?.killRadius === null ? 'Mixed' : undefined
@@ -225,6 +227,7 @@ export default function RightSidebar({
                 label="Step Size"
                 min={0.5}
                 step={0.5}
+                coarseness="fine"
                 value={mixedParams?.stepSize ?? null}
                 placeholder={
                   mixedParams?.stepSize === null ? 'Mixed' : undefined
@@ -241,6 +244,7 @@ export default function RightSidebar({
                 label="Max Nodes"
                 min={100}
                 integer
+                coarseness="coarse"
                 value={mixedParams?.maxNodes ?? null}
                 placeholder={
                   mixedParams?.maxNodes === null ? 'Mixed' : undefined
@@ -257,6 +261,7 @@ export default function RightSidebar({
                 label="Targets"
                 min={50}
                 integer
+                coarseness="coarse"
                 value={mixedParams?.attractorCount ?? null}
                 placeholder={
                   mixedParams?.attractorCount === null ? 'Mixed' : undefined
@@ -273,6 +278,7 @@ export default function RightSidebar({
                 label="Speed"
                 min={1}
                 integer
+                coarseness="coarse"
                 value={mixedParams?.stepsPerFrame ?? null}
                 placeholder={
                   mixedParams?.stepsPerFrame === null ? 'Mixed' : undefined
@@ -307,6 +313,7 @@ export default function RightSidebar({
                   label="Seed Count"
                   min={1}
                   integer
+                  coarseness="coarse"
                   value={mixedParams?.seedCount ?? null}
                   placeholder={
                     mixedParams?.seedCount === null ? 'Mixed' : undefined
@@ -324,6 +331,7 @@ export default function RightSidebar({
                   min={0}
                   max={100}
                   integer
+                  coarseness="fine"
                   value={mixedParams?.seedSpread ?? null}
                   placeholder={
                     mixedParams?.seedSpread === null ? 'Mixed' : undefined
@@ -403,6 +411,7 @@ export default function RightSidebar({
                     min={-180}
                     max={180}
                     integer
+                    coarseness="fine"
                     value={mixedParams?.seedAngle ?? null}
                     placeholder={
                       mixedParams?.seedAngle === null ? 'Mixed' : undefined
@@ -438,6 +447,7 @@ export default function RightSidebar({
                   className="flex-1"
                   min={0}
                   integer
+                  coarseness="coarse"
                   value={mixedSeed?.seed ?? null}
                   placeholder={mixedSeed?.seed === null ? 'Mixed' : undefined}
                   onValueChange={(next) =>
@@ -475,6 +485,7 @@ export default function RightSidebar({
                 label="Count"
                 min={0}
                 integer
+                coarseness="coarse"
                 value={mixedObstacles?.count ?? null}
                 placeholder={
                   mixedObstacles?.count === null ? 'Mixed' : undefined
@@ -494,6 +505,7 @@ export default function RightSidebar({
                 label={`Margin (${unit})`}
                 min={0}
                 step={0.1}
+                coarseness="fine"
                 value={mixedObstacles?.margin ?? null}
                 placeholder={
                   mixedObstacles?.margin === null ? 'Mixed' : undefined
@@ -513,6 +525,7 @@ export default function RightSidebar({
                 label="Min Vertices"
                 min={3}
                 integer
+                coarseness="coarse"
                 value={mixedObstacles?.minVertices ?? null}
                 placeholder={
                   mixedObstacles?.minVertices === null ? 'Mixed' : undefined
@@ -532,6 +545,7 @@ export default function RightSidebar({
                 label="Max Vertices"
                 min={3}
                 integer
+                coarseness="coarse"
                 value={mixedObstacles?.maxVertices ?? null}
                 placeholder={
                   mixedObstacles?.maxVertices === null ? 'Mixed' : undefined
@@ -551,6 +565,7 @@ export default function RightSidebar({
                 label={`Min Radius (${unit})`}
                 min={0.1}
                 step={0.1}
+                coarseness="fine"
                 value={mixedObstacles?.minRadius ?? null}
                 placeholder={
                   mixedObstacles?.minRadius === null ? 'Mixed' : undefined
@@ -570,6 +585,7 @@ export default function RightSidebar({
                 label={`Max Radius (${unit})`}
                 min={0.2}
                 step={0.1}
+                coarseness="fine"
                 value={mixedObstacles?.maxRadius ?? null}
                 placeholder={
                   mixedObstacles?.maxRadius === null ? 'Mixed' : undefined
@@ -596,6 +612,7 @@ export default function RightSidebar({
                 label="Stroke Width"
                 min={0.5}
                 step={0.5}
+                coarseness="fine"
                 value={mixedRenderSettings?.strokeWidth ?? null}
                 placeholder={
                   mixedRenderSettings?.strokeWidth === null
@@ -617,6 +634,7 @@ export default function RightSidebar({
                 label="Node Radius"
                 min={0.5}
                 step={0.5}
+                coarseness="fine"
                 value={mixedRenderSettings?.nodeRadius ?? null}
                 placeholder={
                   mixedRenderSettings?.nodeRadius === null ? 'Mixed' : undefined
@@ -724,6 +742,7 @@ export default function RightSidebar({
                 label="FPS"
                 min={1}
                 integer
+                coarseness="coarse"
                 value={mixedExportSettings?.fps ?? null}
                 placeholder={
                   mixedExportSettings?.fps === null ? 'Mixed' : undefined
@@ -740,6 +759,7 @@ export default function RightSidebar({
                 label="Steps/Frame"
                 min={1}
                 integer
+                coarseness="coarse"
                 value={mixedExportSettings?.stepsPerFrame ?? null}
                 placeholder={
                   mixedExportSettings?.stepsPerFrame === null
@@ -762,6 +782,7 @@ export default function RightSidebar({
                 className="col-span-2"
                 min={1}
                 integer
+                coarseness="coarse"
                 value={mixedExportSettings?.durationSeconds ?? null}
                 placeholder={
                   mixedExportSettings?.durationSeconds === null
