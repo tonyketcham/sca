@@ -8,7 +8,7 @@ import type {
 import type { SimulationParams } from '../engine/simulationState';
 import type { RenderSettings } from '../render/canvasRenderer';
 
-export const LATEST_SCHEMA_VERSION = 6;
+export const LATEST_SCHEMA_VERSION = 7;
 
 type Migration = (input: any) => any;
 
@@ -67,6 +67,19 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 6,
+      paper: { ...input.paper },
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(
+        input.selectedFrameIndices,
+        frames.length,
+      ),
+    };
+  },
+  7: (input) => {
+    const frames = normalizeFrames(input);
+    return {
+      schemaVersion: 7,
       paper: { ...input.paper },
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
@@ -213,6 +226,10 @@ function normalizeFrame(
         typeof frame.params?.avoidObstacles === 'boolean'
           ? frame.params.avoidObstacles
           : true,
+      seedRotationStrength: Number(frame.params?.seedRotationStrength ?? 0),
+      attractorTangentStrength: Number(
+        frame.params?.attractorTangentStrength ?? 0,
+      ),
     },
     obstacles: {
       count: Number(frame.obstacles?.count ?? 4),

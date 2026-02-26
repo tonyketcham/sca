@@ -71,6 +71,12 @@ export default function RightSidebar({
       stepsPerFrame: getMixedValue(
         selectedFrames.map((f) => f.params.stepsPerFrame),
       ),
+      seedRotationStrength: getMixedValue(
+        selectedFrames.map((f) => f.params.seedRotationStrength),
+      ),
+      attractorTangentStrength: getMixedValue(
+        selectedFrames.map((f) => f.params.attractorTangentStrength),
+      ),
       seedCount: getMixedValue(selectedFrames.map((f) => f.params.seedCount)),
       seedSpread: getMixedValue(selectedFrames.map((f) => f.params.seedSpread)),
       seedPlacement: getMixedValue(
@@ -287,6 +293,46 @@ export default function RightSidebar({
                   onUpdateSelectedFrames((f) => ({
                     ...f,
                     params: { ...f.params, stepsPerFrame: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-seed-rotation')}
+                label="Seed Rotation"
+                min={-2}
+                max={2}
+                step={0.05}
+                coarseness="fine"
+                value={mixedParams?.seedRotationStrength ?? null}
+                placeholder={
+                  mixedParams?.seedRotationStrength === null
+                    ? 'Mixed'
+                    : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, seedRotationStrength: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-attractor-rotation')}
+                label="Attractor Rotation"
+                min={-2}
+                max={2}
+                step={0.05}
+                coarseness="fine"
+                value={mixedParams?.attractorTangentStrength ?? null}
+                placeholder={
+                  mixedParams?.attractorTangentStrength === null
+                    ? 'Mixed'
+                    : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, attractorTangentStrength: next },
                   }))
                 }
               />

@@ -49,6 +49,8 @@ const DEFAULT_PARAMS: SimulationParams = {
   attractorCount: 900,
   stepsPerFrame: 3,
   avoidObstacles: true,
+  seedRotationStrength: 0,
+  attractorTangentStrength: 0,
 };
 
 const DEFAULT_OBSTACLES: ObstacleSettings = {
