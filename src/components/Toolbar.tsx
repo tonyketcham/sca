@@ -53,14 +53,14 @@ export default function Toolbar({
     onExportMp4();
   };
 
-  const exportLabel =
-    exportFormat === 'mp4' && isExportingMp4
-      ? 'Exporting MP4...'
-      : `Export ${exportFormatLabels[exportFormat]}`;
+  const isExportingSelectedMp4 = exportFormat === 'mp4' && isExportingMp4;
+  const exportAriaLabel = isExportingSelectedMp4
+    ? 'Exporting MP4'
+    : `Export ${exportFormatLabels[exportFormat]}`;
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
-      <div className="flex h-12 items-center gap-3 rounded-full border border-border bg-surface/80 pl-1 pr-4 backdrop-blur-md shadow-lg">
+      <div className="flex h-12 items-center gap-3 rounded-full border border-border bg-surface/80 pl-1 pr-1 backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-1.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-surface/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
             <Button
@@ -111,32 +111,37 @@ export default function Toolbar({
 
         <div className="h-4 w-px bg-border"></div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex h-10 items-center rounded-full border border-border/70 bg-surface/70 p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
           <Button
             onClick={handleExport}
-            variant="secondary"
+            variant="ghost"
             size="compact"
-            className="h-8 rounded-l-full rounded-r-[10px] border-r-0 px-3.5"
-            aria-label={exportLabel}
-            disabled={exportFormat === 'mp4' && isExportingMp4}
+            className="h-8 w-32 rounded-full px-3 whitespace-nowrap text-foreground hover:bg-surfaceHover/80"
+            aria-label={exportAriaLabel}
+            disabled={isExportingSelectedMp4}
           >
-            <Download className="h-4 w-4" />
-            <span>{exportLabel}</span>
+            <Download className="h-4 w-4 text-muted" />
+            <span>{isExportingSelectedMp4 ? 'Exporting...' : 'Export'}</span>
+            {!isExportingSelectedMp4 && (
+              <span className="text-foreground">
+                {exportFormatLabels[exportFormat]}
+              </span>
+            )}
           </Button>
           <Select
             value={exportFormat}
             onValueChange={(value) => setExportFormat(value as ExportFormat)}
           >
             <SelectTrigger
-              className="h-8 w-8 rounded-l-[10px] rounded-r-full border-l border-l-border/70 bg-surface/50 px-0 text-muted hover:text-foreground justify-center"
+              className="h-8 w-8 rounded-full border-transparent border-l-border/70 bg-transparent px-0 text-muted shadow-none hover:bg-surfaceHover/70 hover:text-foreground focus-visible:ring-primary/50 justify-center"
               aria-label="Select export format"
             >
               <span className="sr-only">Select export format</span>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="png">PNG - Raster image</SelectItem>
-              <SelectItem value="svg">SVG - Vector graphic</SelectItem>
-              <SelectItem value="mp4">MP4 - Animated video</SelectItem>
+              <SelectItem value="png">PNG</SelectItem>
+              <SelectItem value="svg">SVG</SelectItem>
+              <SelectItem value="mp4">MP4</SelectItem>
             </SelectContent>
           </Select>
         </div>
