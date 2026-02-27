@@ -143,6 +143,7 @@ function fromCompact(input: unknown): ConfigState | null {
           avoidObstacles: Number(params[11]) === 1,
           seedRotationStrength: numberAt(params, 12, 0),
           attractorTangentStrength: numberAt(params, 13, 0),
+          pathSmoothing: numberAt(params, 14, 0),
         }
       : {
           influenceRadius: Number(params[0]),
@@ -159,6 +160,7 @@ function fromCompact(input: unknown): ConfigState | null {
           avoidObstacles: Number(params[8]) === 1,
           seedRotationStrength: 0,
           attractorTangentStrength: 0,
+          pathSmoothing: 0,
         };
 
   return {
@@ -252,6 +254,7 @@ function frameToCompact(frame: FrameConfig): CompactConfig {
       frame.params.avoidObstacles ? 1 : 0,
       frame.params.seedRotationStrength,
       frame.params.attractorTangentStrength,
+      frame.params.pathSmoothing,
     ],
     [
       frame.obstacles.count,
@@ -312,6 +315,7 @@ function frameFromCompact(input: CompactConfig): FrameConfig {
       avoidObstacles: Number(params[11]) === 1,
       seedRotationStrength: numberAt(params, 12, 0),
       attractorTangentStrength: numberAt(params, 13, 0),
+      pathSmoothing: numberAt(params, 14, 0),
     },
     obstacles: {
       count: Number(obstacles[0]),

@@ -27,6 +27,8 @@ export function stepSimulation(
   const influenceRadius = params.influenceRadius;
   const killRadius = params.killRadius;
   const hasAttractorTangent = params.attractorTangentStrength !== 0;
+  const pathSmoothing = clamp01(params.pathSmoothing);
+  const hasPathSmoothing = pathSmoothing > 0;
   const influenceRadiusSq = influenceRadius * influenceRadius;
   const killRadiusSq = killRadius * killRadius;
 
@@ -105,7 +107,7 @@ export function stepSimulation(
       y: node.y - rootSeed.y,
     });
     const seedRotationDirection = perpendicularClockwise(seedRadialDirection);
-    const direction = normalize({
+    const growthDirection = normalize({
       x:
         averagedAttractorDirection.x +
         seedRotationDirection.x * params.seedRotationStrength +
@@ -115,6 +117,26 @@ export function stepSimulation(
         seedRotationDirection.y * params.seedRotationStrength +
         averagedAttractorTangent.y * params.attractorTangentStrength,
     });
+    const parentNode =
+      node.parent === null ? null : (state.nodes[node.parent] ?? null);
+    const previousDirection =
+      parentNode === null
+        ? null
+        : normalize({
+            x: node.x - parentNode.x,
+            y: node.y - parentNode.y,
+          });
+    const direction =
+      hasPathSmoothing && previousDirection
+        ? normalize({
+            x:
+              growthDirection.x * (1 - pathSmoothing) +
+              previousDirection.x * pathSmoothing,
+            y:
+              growthDirection.y * (1 - pathSmoothing) +
+              previousDirection.y * pathSmoothing,
+          })
+        : growthDirection;
 
     const candidate = {
       x: node.x + direction.x * params.stepSize,
@@ -185,6 +207,10 @@ function normalize(vec: Vec2): Vec2 {
 
 function perpendicularClockwise(vec: Vec2): Vec2 {
   return { x: vec.y, y: -vec.x };
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
 }
 
 function isWithinBounds(

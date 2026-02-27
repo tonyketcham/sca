@@ -206,29 +206,33 @@ function drawSelectionOutline(
   zoom: number,
   state: { hovered: boolean; selected: boolean },
 ): void {
+  const hoverOutlineWidth = 0.5 / zoom;
+  const selectedOutlineWidth = 1 / zoom;
+  const selectedInnerOutlineWidth = 0.5 / zoom;
   ctx.save();
   // Ensure we render the hover state underneath the selected state if both are somehow active
   if (state.hovered && !state.selected) {
     ctx.strokeStyle = 'oklch(var(--border-hover))';
-    ctx.lineWidth = 1 / zoom;
+    ctx.lineWidth = hoverOutlineWidth;
     ctx.strokeRect(0, 0, bounds.width, bounds.height);
   }
   if (state.selected) {
-    // 2px primary border for selection to be prominent and tool-like
+    // 1px primary border for clear selection without overpowering frame content.
     ctx.strokeStyle = 'oklch(var(--primary))';
-    ctx.lineWidth = 2 / zoom;
+    ctx.lineWidth = selectedOutlineWidth;
     // We adjust strokeRect to account for the stroke width on the outside or center
     // Standard strokeRect is centered, so we leave it as is, or we could inset it
     ctx.strokeRect(0, 0, bounds.width, bounds.height);
 
     // Add an inner ring for more tool-like precision
     ctx.strokeStyle = 'oklch(var(--background) / 0.5)';
-    ctx.lineWidth = 1 / zoom;
+    ctx.lineWidth = selectedInnerOutlineWidth;
+    const innerInset = selectedInnerOutlineWidth;
     ctx.strokeRect(
-      1 / zoom,
-      1 / zoom,
-      bounds.width - 2 / zoom,
-      bounds.height - 2 / zoom,
+      innerInset,
+      innerInset,
+      bounds.width - innerInset * 2,
+      bounds.height - innerInset * 2,
     );
   }
   ctx.restore();
@@ -268,7 +272,7 @@ function renderFrame(
   if (mode === 'editor') {
     // Make the grid frame borders more subtle and precise
     ctx.strokeStyle = 'oklch(var(--border) / 0.5)';
-    ctx.lineWidth = 1 / view.zoom; // Keep it 1px visual regardless of zoom
+    ctx.lineWidth = 0.5 / view.zoom; // Keep it visually lighter for high-density displays.
     ctx.strokeRect(0, 0, state.bounds.width, state.bounds.height);
   }
 }

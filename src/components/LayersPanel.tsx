@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import {
   draggable,
   dropTargetForElements,
 } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
-import { GripVertical, Layers } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 import type { FrameConfig, TemplateGridSettings } from '../types/ui';
 import { cn } from '../lib/utils';
 import { ScrollArea } from './ui/scroll-area';
@@ -14,7 +20,7 @@ type LayersPanelProps = {
   frames: FrameConfig[];
   templateGrid: TemplateGridSettings;
   selectedFrameIndices: number[];
-  onSelectProject: () => void;
+  headerAction?: ReactNode;
   onSelectFrame: (index: number) => void;
   onToggleFrame: (index: number) => void;
   onSelectFrameRange: (startIndex: number, endIndex: number) => void;
@@ -33,14 +39,13 @@ export default function LayersPanel({
   frames,
   templateGrid,
   selectedFrameIndices,
-  onSelectProject,
+  headerAction,
   onSelectFrame,
   onToggleFrame,
   onSelectFrameRange,
   onReorderFrames,
   onRenameFrame,
 }: LayersPanelProps) {
-  const isProjectSelected = selectedFrameIndices.length === 0;
   const rowCount = Math.max(1, Math.floor(templateGrid.rows));
   const columnCount = Math.max(1, Math.floor(templateGrid.cols));
   const totalCells = rowCount * columnCount;
@@ -52,45 +57,19 @@ export default function LayersPanel({
     }
   }, [selectedFrameIndices.length]);
 
-  const handleSelectProject = () => {
-    setAnchorIndex(null);
-    onSelectProject();
-  };
-
   return (
-    <section className="space-y-3 border-b border-border px-4 py-3">
+    <section className="group space-y-2.5 border-b border-border px-3.5 py-3">
       <div className="flex items-center justify-between">
-        <SectionHeading className="flex items-center gap-2">
-          <Layers className="h-3.5 w-3.5" />
-          Layers
-        </SectionHeading>
-        <div className="text-[11px] tabular-nums text-muted opacity-70">
-          {frames.length}/{totalCells} cells
+        <SectionHeading>Layers</SectionHeading>
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] tabular-nums text-muted opacity-65 transition-opacity duration-300 ease-out-expo group-hover:opacity-90">
+            {frames.length}/{totalCells} cells, {rowCount}x{columnCount}
+          </div>
+          {headerAction}
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-        <button
-          type="button"
-          onClick={handleSelectProject}
-          className={cn(
-            'flex w-full items-center justify-between rounded-md border px-2.5 py-2 text-left text-xs transition-colors duration-200 ease-out-expo',
-            isProjectSelected
-              ? 'border-primary/50 bg-primary/20 text-primary'
-              : 'border-transparent bg-surface text-foreground hover:border-borderHover hover:bg-surfaceHover',
-          )}
-        >
-          <span className="font-semibold">Project Setup</span>
-          <span className="text-[11px] text-muted opacity-70">
-            Paper + Template
-          </span>
-        </button>
-        <div className="flex h-[34px] min-w-[98px] items-center justify-center rounded-md border border-border bg-surface px-2 text-[11px] font-medium tabular-nums text-muted">
-          {rowCount} x {columnCount}
-        </div>
-      </div>
-
-      <div className="h-[clamp(12rem,30vh,17.5rem)] overflow-hidden rounded-md border border-border bg-surface/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]">
+      <div className="h-[clamp(12rem,30vh,17.5rem)] overflow-hidden rounded-[10px] border border-border/70 bg-surface shadow-[inset_0_1px_2px_rgba(0,0,0,0.22)]">
         <ScrollArea className="h-full">
           <div className="space-y-1 p-1.5">
             {frames.map((frame, index) => (
@@ -258,25 +237,28 @@ function FrameLayerRow({
         }
       }}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded-[5px] border px-2 py-1.5 text-xs transition-all duration-200 ease-out-expo focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50',
+        'group flex items-center gap-2 rounded-[6px] border px-2 py-1.5 text-xs transition-all duration-200 ease-out-expo focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50',
+        isEditing ? 'cursor-default' : 'cursor-grab active:cursor-grabbing',
         isSelected
-          ? 'border-primary/50 bg-primary/20 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]'
-          : 'border-transparent text-foreground hover:border-borderHover hover:bg-surfaceHover',
-        isDraggedOver ? 'border-primary/70 bg-primary/20' : null,
-        isDragging ? 'opacity-70 scale-[0.98]' : null,
+          ? 'border-primary/50 bg-primary/20 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.04)]'
+          : 'border-transparent text-foreground hover:border-borderHover/70 hover:bg-surfaceHover',
+        isDraggedOver ? 'border-primary/65 bg-primary/18' : null,
+        isDragging ? 'opacity-75 scale-[0.99]' : null,
       )}
     >
       <GripVertical
         className={cn(
-          'h-3.5 w-3.5 shrink-0',
-          isSelected ? 'text-primary/70' : 'text-muted',
+          'h-3.5 w-3.5 shrink-0 transition-colors duration-200 ease-out-expo',
+          isSelected
+            ? 'text-primary/70'
+            : 'text-muted/60 group-hover:text-muted',
         )}
         aria-hidden="true"
       />
       {isEditing ? (
         <input
           ref={inputRef}
-          className="flex-1 rounded-[4px] border border-border bg-background px-1.5 py-0.5 text-xs text-foreground outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.15)]"
+          className="flex-1 rounded-[4px] border border-border bg-surface px-1.5 py-0.5 text-xs text-foreground outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.18)]"
           value={draftName}
           onChange={(event) =>
             setDraftName(event.target.value.slice(0, MAX_FRAME_NAME_LENGTH))
@@ -298,7 +280,7 @@ function FrameLayerRow({
         />
       ) : (
         <span
-          className="min-w-0 flex-1 truncate"
+          className="min-w-0 flex-1 truncate text-[12px]"
           title={label}
           onDoubleClick={(event) => {
             event.stopPropagation();
@@ -310,10 +292,10 @@ function FrameLayerRow({
       )}
       <span
         className={cn(
-          'shrink-0 rounded-[4px] border px-1.5 py-0.5 text-[10px] tabular-nums transition-colors duration-200',
+          'shrink-0 rounded-[4px] border px-1.5 py-0.5 text-[10px] tabular-nums transition-all duration-200 ease-out-expo',
           isSelected
-            ? 'border-primary/30 bg-primary/10 text-primary'
-            : 'border-border bg-surface text-muted',
+            ? 'border-primary/30 bg-primary/10 text-primary opacity-100'
+            : 'border-border/70 bg-surface text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
         )}
       >
         #{layerNumber}

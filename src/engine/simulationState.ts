@@ -33,6 +33,7 @@ export type SimulationParams = {
   avoidObstacles: boolean;
   seedRotationStrength: number;
   attractorTangentStrength: number;
+  pathSmoothing: number;
 };
 
 export type SimulationState = {

@@ -13,7 +13,6 @@ import { ScrubbableNumberField } from './ui/scrubbable-number-field';
 import { ScrollArea } from './ui/scroll-area';
 import { SidebarHeader, SidebarShell } from './ui/sidebar-shell';
 import { SectionHeading } from './ui/section-heading';
-import { InsetPanel } from './ui/inset-panel';
 import { ColorSwatchField } from './ui/color-swatch-field';
 import { SwitchControlRow } from './ui/switch-control-row';
 import { LabeledField } from './ui/labeled-field';
@@ -29,6 +28,23 @@ type RightSidebarProps = {
   onRegenerateObstacles: () => void;
   unit: string;
 };
+
+function finiteNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function toPathSmoothingPercent(value: number): number {
+  return Number((clamp01(finiteNumber(value, 0)) * 100).toFixed(2));
+}
+
+function fromPathSmoothingPercent(value: number): number {
+  return clamp01(finiteNumber(value, 0) / 100);
+}
 
 export default function RightSidebar({
   frames,
@@ -49,6 +65,7 @@ export default function RightSidebar({
   );
 
   const hasFrameSelection = selectedFrames.length > 0;
+  const compactSwitchRowClassName = 'px-1.5 py-1';
 
   const getMixedValue = <T,>(values: T[]): T | null => {
     if (values.length === 0) return null;
@@ -76,6 +93,11 @@ export default function RightSidebar({
       ),
       attractorTangentStrength: getMixedValue(
         selectedFrames.map((f) => f.params.attractorTangentStrength),
+      ),
+      pathSmoothing: getMixedValue(
+        selectedFrames.map((f) =>
+          toPathSmoothingPercent(f.params.pathSmoothing),
+        ),
       ),
       seedCount: getMixedValue(selectedFrames.map((f) => f.params.seedCount)),
       seedSpread: getMixedValue(selectedFrames.map((f) => f.params.seedSpread)),
@@ -163,6 +185,18 @@ export default function RightSidebar({
       randomizeSeed: getMixedValue(selectedFrames.map((f) => f.randomizeSeed)),
     };
   }, [hasFrameSelection, selectedFrames]);
+  const rootColorValue =
+    mixedRenderSettings?.rootColor ??
+    selectedFrames[0]?.renderSettings.rootColor ??
+    '#000000';
+  const obstacleColorValue =
+    mixedRenderSettings?.obstacleFill ??
+    selectedFrames[0]?.renderSettings.obstacleFill ??
+    '#000000';
+  const targetColorValue =
+    mixedRenderSettings?.attractorColor ??
+    selectedFrames[0]?.renderSettings.attractorColor ??
+    '#000000';
 
   if (!hasFrameSelection) {
     return (
@@ -191,7 +225,7 @@ export default function RightSidebar({
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6">
           <div className="space-y-4">
-            <SectionHeading>Simulation Parameters</SectionHeading>
+            <SectionHeading>Growth</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
               <ScrubbableNumberField
@@ -336,9 +370,33 @@ export default function RightSidebar({
                   }))
                 }
               />
+              <ScrubbableNumberField
+                id={fieldId('sim-path-smoothing')}
+                label="Path Smoothing"
+                min={0}
+                max={100}
+                integer
+                coarseness="fine"
+                value={mixedParams?.pathSmoothing ?? null}
+                placeholder={
+                  mixedParams?.pathSmoothing === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames(
+                    (f) => ({
+                      ...f,
+                      params: {
+                        ...f.params,
+                        pathSmoothing: fromPathSmoothingPercent(next),
+                      },
+                    }),
+                    { rebuildSimulation: true },
+                  )
+                }
+              />
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="space-y-1.5 pt-1.5">
               <SwitchControlRow
                 id={fieldId('sim-avoid-obstacles')}
                 label="Avoid obstacles"
@@ -349,134 +407,135 @@ export default function RightSidebar({
                     params: { ...f.params, avoidObstacles: checked },
                   }))
                 }
+                rowClassName={compactSwitchRowClassName}
               />
             </div>
+          </div>
 
-            <InsetPanel tone="subtle" className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <ScrubbableNumberField
-                  id={fieldId('sim-seed-count')}
-                  label="Seed Count"
-                  min={1}
-                  integer
-                  coarseness="coarse"
-                  value={mixedParams?.seedCount ?? null}
-                  placeholder={
-                    mixedParams?.seedCount === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
+          <div className="space-y-4">
+            <SectionHeading>Seed</SectionHeading>
+            <div className="grid grid-cols-2 gap-3">
+              <ScrubbableNumberField
+                id={fieldId('sim-seed-count')}
+                label="Seed Count"
+                min={1}
+                integer
+                coarseness="coarse"
+                value={mixedParams?.seedCount ?? null}
+                placeholder={
+                  mixedParams?.seedCount === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, seedCount: next },
+                  }))
+                }
+              />
+              <ScrubbableNumberField
+                id={fieldId('sim-seed-spread')}
+                label="Spread %"
+                min={0}
+                max={100}
+                integer
+                coarseness="fine"
+                value={mixedParams?.seedSpread ?? null}
+                placeholder={
+                  mixedParams?.seedSpread === null ? 'Mixed' : undefined
+                }
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({
+                    ...f,
+                    params: { ...f.params, seedSpread: next },
+                  }))
+                }
+              />
+              <LabeledField
+                id={fieldId('sim-seed-placement')}
+                label="Placement"
+                className="col-span-2"
+              >
+                <Select
+                  value={mixedParams?.seedPlacement ?? undefined}
+                  onValueChange={(value) =>
                     onUpdateSelectedFrames((f) => ({
                       ...f,
-                      params: { ...f.params, seedCount: next },
+                      params: {
+                        ...f.params,
+                        seedPlacement:
+                          value as SimulationParams['seedPlacement'],
+                      },
                     }))
                   }
-                />
-                <ScrubbableNumberField
-                  id={fieldId('sim-seed-spread')}
-                  label="Spread %"
-                  min={0}
-                  max={100}
-                  integer
-                  coarseness="fine"
-                  value={mixedParams?.seedSpread ?? null}
-                  placeholder={
-                    mixedParams?.seedSpread === null ? 'Mixed' : undefined
-                  }
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({
-                      ...f,
-                      params: { ...f.params, seedSpread: next },
-                    }))
-                  }
-                />
-                <LabeledField
-                  id={fieldId('sim-seed-placement')}
-                  label="Placement"
-                  className="col-span-2"
                 >
+                  <SelectTrigger id={fieldId('sim-seed-placement')}>
+                    <SelectValue
+                      placeholder={
+                        mixedParams?.seedPlacement ? undefined : 'Mixed'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="edge">Edge line</SelectItem>
+                    <SelectItem value="scatter">Scatter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </LabeledField>
+            </div>
+            {mixedParams?.seedPlacement === 'edge' && (
+              <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1">
+                <LabeledField id={fieldId('sim-seed-edge')} label="Edge">
                   <Select
-                    value={mixedParams?.seedPlacement ?? undefined}
+                    value={mixedParams?.seedEdge ?? undefined}
                     onValueChange={(value) =>
                       onUpdateSelectedFrames((f) => ({
                         ...f,
                         params: {
                           ...f.params,
-                          seedPlacement:
-                            value as SimulationParams['seedPlacement'],
+                          seedEdge: value as SimulationParams['seedEdge'],
                         },
                       }))
                     }
                   >
-                    <SelectTrigger id={fieldId('sim-seed-placement')}>
+                    <SelectTrigger id={fieldId('sim-seed-edge')}>
                       <SelectValue
                         placeholder={
-                          mixedParams?.seedPlacement ? undefined : 'Mixed'
+                          mixedParams?.seedEdge ? undefined : 'Mixed'
                         }
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="edge">Edge line</SelectItem>
-                      <SelectItem value="scatter">Scatter</SelectItem>
+                      <SelectItem value="top">Top</SelectItem>
+                      <SelectItem value="bottom">Bottom</SelectItem>
+                      <SelectItem value="left">Left</SelectItem>
+                      <SelectItem value="right">Right</SelectItem>
                     </SelectContent>
                   </Select>
                 </LabeledField>
+                <ScrubbableNumberField
+                  id={fieldId('sim-seed-angle')}
+                  label="Angle °"
+                  min={-180}
+                  max={180}
+                  integer
+                  coarseness="fine"
+                  value={mixedParams?.seedAngle ?? null}
+                  placeholder={
+                    mixedParams?.seedAngle === null ? 'Mixed' : undefined
+                  }
+                  onValueChange={(next) =>
+                    onUpdateSelectedFrames((f) => ({
+                      ...f,
+                      params: { ...f.params, seedAngle: next },
+                    }))
+                  }
+                />
               </div>
-              {mixedParams?.seedPlacement === 'edge' && (
-                <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1">
-                  <LabeledField id={fieldId('sim-seed-edge')} label="Edge">
-                    <Select
-                      value={mixedParams?.seedEdge ?? undefined}
-                      onValueChange={(value) =>
-                        onUpdateSelectedFrames((f) => ({
-                          ...f,
-                          params: {
-                            ...f.params,
-                            seedEdge: value as SimulationParams['seedEdge'],
-                          },
-                        }))
-                      }
-                    >
-                      <SelectTrigger id={fieldId('sim-seed-edge')}>
-                        <SelectValue
-                          placeholder={
-                            mixedParams?.seedEdge ? undefined : 'Mixed'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="top">Top</SelectItem>
-                        <SelectItem value="bottom">Bottom</SelectItem>
-                        <SelectItem value="left">Left</SelectItem>
-                        <SelectItem value="right">Right</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </LabeledField>
-                  <ScrubbableNumberField
-                    id={fieldId('sim-seed-angle')}
-                    label="Angle °"
-                    min={-180}
-                    max={180}
-                    integer
-                    coarseness="fine"
-                    value={mixedParams?.seedAngle ?? null}
-                    placeholder={
-                      mixedParams?.seedAngle === null ? 'Mixed' : undefined
-                    }
-                    onValueChange={(next) =>
-                      onUpdateSelectedFrames((f) => ({
-                        ...f,
-                        params: { ...f.params, seedAngle: next },
-                      }))
-                    }
-                  />
-                </div>
-              )}
-            </InsetPanel>
-
-            <InsetPanel tone="subtle" className="space-y-3">
+            )}
+            <div className="space-y-3">
               <SwitchControlRow
                 id={fieldId('sim-randomize-seed')}
-                label="Randomize Seed"
+                label="Randomize seed"
                 checked={mixedSeed?.randomizeSeed ?? false}
                 onCheckedChange={(checked) =>
                   onUpdateSelectedFrames((f) => ({
@@ -484,31 +543,28 @@ export default function RightSidebar({
                     randomizeSeed: checked,
                   }))
                 }
-                rowClassName="px-0 py-0 bg-transparent border-none hover:bg-transparent"
+                rowClassName={compactSwitchRowClassName}
               />
-              <div className="flex items-center gap-2">
-                <ScrubbableNumberField
-                  id={fieldId('sim-seed')}
-                  label="Seed Value"
-                  className="flex-1"
-                  min={0}
-                  integer
-                  coarseness="coarse"
-                  value={mixedSeed?.seed ?? null}
-                  placeholder={mixedSeed?.seed === null ? 'Mixed' : undefined}
-                  onValueChange={(next) =>
-                    onUpdateSelectedFrames((f) => ({ ...f, seed: next }), {
-                      rebuildSimulation: true,
-                      seedOverride: next,
-                    })
-                  }
-                  disabled={mixedSeed?.randomizeSeed === true}
-                  inputClassName={
-                    mixedSeed?.randomizeSeed === true ? 'opacity-50' : ''
-                  }
-                />
-              </div>
-            </InsetPanel>
+              <ScrubbableNumberField
+                id={fieldId('sim-seed')}
+                label="Seed Value"
+                min={0}
+                integer
+                coarseness="coarse"
+                value={mixedSeed?.seed ?? null}
+                placeholder={mixedSeed?.seed === null ? 'Mixed' : undefined}
+                onValueChange={(next) =>
+                  onUpdateSelectedFrames((f) => ({ ...f, seed: next }), {
+                    rebuildSimulation: true,
+                    seedOverride: next,
+                  })
+                }
+                disabled={mixedSeed?.randomizeSeed === true}
+                inputClassName={
+                  mixedSeed?.randomizeSeed === true ? 'opacity-50' : ''
+                }
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -519,7 +575,8 @@ export default function RightSidebar({
                 size="icon"
                 onClick={onRegenerateObstacles}
                 className="h-6 w-6"
-                title="Regenerate Obstacles"
+                aria-label="Regenerate obstacles"
+                title="Regenerate obstacles"
               >
                 <RefreshCw className="h-3 w-3" />
               </Button>
@@ -692,10 +749,12 @@ export default function RightSidebar({
                   }))
                 }
               />
+            </div>
+            <div className="space-y-2.5 pt-1">
               <ColorSwatchField
                 id={fieldId('render-root-color')}
                 label="Root Color"
-                value={mixedRenderSettings?.rootColor ?? '#000000'}
+                value={rootColorValue}
                 onValueChange={(value) =>
                   onUpdateSelectedFrames((f) => ({
                     ...f,
@@ -706,7 +765,7 @@ export default function RightSidebar({
               <ColorSwatchField
                 id={fieldId('render-obstacle-color')}
                 label="Obstacle Color"
-                value={mixedRenderSettings?.obstacleFill ?? '#000000'}
+                value={obstacleColorValue}
                 onValueChange={(value) =>
                   onUpdateSelectedFrames((f) => ({
                     ...f,
@@ -720,7 +779,7 @@ export default function RightSidebar({
               <ColorSwatchField
                 id={fieldId('render-attractor-color')}
                 label="Target Color"
-                value={mixedRenderSettings?.attractorColor ?? '#000000'}
+                value={targetColorValue}
                 onValueChange={(value) =>
                   onUpdateSelectedFrames((f) => ({
                     ...f,
@@ -733,10 +792,10 @@ export default function RightSidebar({
               />
             </div>
 
-            <div className="space-y-2 pt-2">
+            <div className="space-y-1.5 pt-1.5">
               <SwitchControlRow
                 id={fieldId('render-show-obstacles')}
-                label="Show Obstacles"
+                label="Show obstacles"
                 checked={mixedRenderSettings?.showObstacles ?? false}
                 onCheckedChange={(checked) =>
                   onUpdateSelectedFrames((f) => ({
@@ -747,10 +806,11 @@ export default function RightSidebar({
                     },
                   }))
                 }
+                rowClassName={compactSwitchRowClassName}
               />
               <SwitchControlRow
                 id={fieldId('render-show-attractors')}
-                label="Show Targets"
+                label="Show targets"
                 checked={mixedRenderSettings?.showAttractors ?? false}
                 onCheckedChange={(checked) =>
                   onUpdateSelectedFrames((f) => ({
@@ -761,10 +821,11 @@ export default function RightSidebar({
                     },
                   }))
                 }
+                rowClassName={compactSwitchRowClassName}
               />
               <SwitchControlRow
                 id={fieldId('render-show-nodes')}
-                label="Show Nodes"
+                label="Show nodes"
                 checked={mixedRenderSettings?.showNodes ?? false}
                 onCheckedChange={(checked) =>
                   onUpdateSelectedFrames((f) => ({
@@ -775,12 +836,13 @@ export default function RightSidebar({
                     },
                   }))
                 }
+                rowClassName={compactSwitchRowClassName}
               />
             </div>
           </div>
 
           <div className="space-y-4">
-            <SectionHeading>Export Settings</SectionHeading>
+            <SectionHeading>Export</SectionHeading>
 
             <div className="grid grid-cols-2 gap-3">
               <ScrubbableNumberField
@@ -802,7 +864,7 @@ export default function RightSidebar({
               />
               <ScrubbableNumberField
                 id={fieldId('export-steps')}
-                label="Steps/Frame"
+                label="Steps/frame"
                 min={1}
                 integer
                 coarseness="coarse"
@@ -866,6 +928,7 @@ export default function RightSidebar({
                   },
                 }))
               }
+              rowClassName={compactSwitchRowClassName}
             />
           </div>
         </div>

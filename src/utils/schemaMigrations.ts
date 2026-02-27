@@ -8,7 +8,7 @@ import type {
 import type { SimulationParams } from '../engine/simulationState';
 import type { RenderSettings } from '../render/canvasRenderer';
 
-export const LATEST_SCHEMA_VERSION = 8;
+export const LATEST_SCHEMA_VERSION = 10;
 
 type Migration = (input: any) => any;
 
@@ -93,6 +93,32 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 8,
+      paper: { ...input.paper },
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(
+        input.selectedFrameIndices,
+        frames.length,
+      ),
+    };
+  },
+  9: (input) => {
+    const frames = normalizeFrames(input);
+    return {
+      schemaVersion: 9,
+      paper: { ...input.paper },
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(
+        input.selectedFrameIndices,
+        frames.length,
+      ),
+    };
+  },
+  10: (input) => {
+    const frames = normalizeFrames(input);
+    return {
+      schemaVersion: 10,
       paper: { ...input.paper },
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
@@ -244,6 +270,7 @@ function normalizeFrame(
         frame.params?.attractorTangentStrength,
         0,
       ),
+      pathSmoothing: clamp01(finiteNumber(frame.params?.pathSmoothing, 0)),
     },
     obstacles: {
       count: Number(frame.obstacles?.count ?? 4),
@@ -292,4 +319,8 @@ function defaultFrameName(index: number): string {
 function finiteNumber(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
 }

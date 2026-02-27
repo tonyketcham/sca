@@ -1,0 +1,14 @@
+---
+description: Prevent false Mixed states in migrated configs
+alwaysApply: true
+---
+
+# Schema Migration Default Materialization
+
+When adding or changing config/schema fields:
+
+- Add a new schema version migration that backfills explicit defaults.
+- If the new version may already exist with invalid/missing values, add a follow-up schema version that re-normalizes those fields deterministically.
+- In `src/utils/schemaMigrations.ts`, normalize numeric fields with finite checks and clamps where needed.
+- In `src/App.tsx` runtime frame normalization, materialize explicit defaults for new fields so in-memory frames cannot retain `undefined` or `NaN`.
+- Ensure mixed-value UI code does not treat invalid numeric values as distinct states (avoid false `Mixed` for single-frame selection).

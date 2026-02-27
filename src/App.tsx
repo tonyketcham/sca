@@ -51,6 +51,7 @@ const DEFAULT_PARAMS: SimulationParams = {
   avoidObstacles: true,
   seedRotationStrength: 0,
   attractorTangentStrength: 0,
+  pathSmoothing: 0,
 };
 
 const DEFAULT_OBSTACLES: ObstacleSettings = {
@@ -663,7 +664,7 @@ export default function App() {
         for (const index of selectedFrameIndices) {
           const frame = prev[index];
           if (!frame) continue;
-          const updated = updater(frame);
+          const updated = normalizeFrameConfig(updater(frame), index);
           next[index] = updated;
           updatedFrames.set(index, updated);
         }
@@ -711,10 +712,6 @@ export default function App() {
       { rebuildSimulation: true },
     );
   }, [hasFrameSelection, updateSelectedFrames]);
-
-  const selectProject = useCallback(() => {
-    setSelectedFrameIndices([]);
-  }, []);
 
   const selectSingleFrame = useCallback(
     (index: number) => {
@@ -793,7 +790,6 @@ export default function App() {
           savedEntries={savedEntries}
           onPaperChange={setPaper}
           onTemplateGridChange={setTemplateGrid}
-          onSelectProject={selectProject}
           onSelectFrame={selectSingleFrame}
           onToggleFrame={toggleFrameSelection}
           onSelectFrameRange={selectFrameRange}
@@ -883,29 +879,9 @@ function normalizeFrames(
   targetLength: number,
 ): FrameConfig[] {
   const safeFrames = Array.isArray(frames) ? frames : [];
-  const normalized = safeFrames.map((frame, index) => {
-    const params = { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) };
-    return {
-      name:
-        typeof frame?.name === 'string' && frame.name.trim().length > 0
-          ? frame.name
-          : createFrameName(index),
-      params: {
-        ...params,
-        seedRotationStrength: finiteNumber(params.seedRotationStrength, 0),
-        attractorTangentStrength: finiteNumber(
-          params.attractorTangentStrength,
-          0,
-        ),
-      },
-      obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
-      renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
-      exportSettings: { ...DEFAULT_EXPORT, ...(frame?.exportSettings ?? {}) },
-      seed: Number.isFinite(frame?.seed) ? frame.seed : createSeed(),
-      randomizeSeed:
-        typeof frame?.randomizeSeed === 'boolean' ? frame.randomizeSeed : true,
-    };
-  });
+  const normalized = safeFrames.map((frame, index) =>
+    normalizeFrameConfig(frame, index),
+  );
   if (normalized.length >= targetLength) {
     return normalized.slice(0, Math.max(1, targetLength));
   }
@@ -914,6 +890,37 @@ function normalizeFrames(
     next.push(createDefaultFrame(createFrameName(next.length)));
   }
   return next;
+}
+
+function normalizeFrameConfig(
+  frame: FrameConfig | undefined,
+  index: number,
+): FrameConfig {
+  const params = { ...DEFAULT_PARAMS, ...(frame?.params ?? {}) };
+  const seed = frame?.seed;
+  return {
+    name:
+      typeof frame?.name === 'string' && frame.name.trim().length > 0
+        ? frame.name
+        : createFrameName(index),
+    params: {
+      ...params,
+      seedRotationStrength: finiteNumber(params.seedRotationStrength, 0),
+      attractorTangentStrength: finiteNumber(
+        params.attractorTangentStrength,
+        0,
+      ),
+      pathSmoothing: clamp01(
+        finiteNumber(params.pathSmoothing, DEFAULT_PARAMS.pathSmoothing),
+      ),
+    },
+    obstacles: { ...DEFAULT_OBSTACLES, ...(frame?.obstacles ?? {}) },
+    renderSettings: { ...DEFAULT_RENDER, ...(frame?.renderSettings ?? {}) },
+    exportSettings: { ...DEFAULT_EXPORT, ...(frame?.exportSettings ?? {}) },
+    seed: Number.isFinite(seed) ? Number(seed) : createSeed(),
+    randomizeSeed:
+      typeof frame?.randomizeSeed === 'boolean' ? frame.randomizeSeed : true,
+  };
 }
 
 function resizeFrames(
@@ -1029,4 +1036,8 @@ function createGutterObstacles(
 function finiteNumber(value: unknown, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
 }
