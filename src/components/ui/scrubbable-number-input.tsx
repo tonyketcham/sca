@@ -28,6 +28,13 @@ type ScrubFeedbackState = {
   edgePressure: number;
 };
 
+type ScrubCursorState = {
+  isVisible: boolean;
+  x: number;
+  y: number;
+  viewportWidth: number;
+};
+
 const PX_PER_STEP_BY_COARSENESS: Record<ScrubCoarseness, number> = {
   fine: 8,
   normal: 4,
@@ -42,6 +49,14 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 const rubberBandDistance = (distancePx: number) =>
   (distancePx * RUBBER_BAND_PX) / (distancePx + RUBBER_BAND_PX);
+
+const wrapCoordinate = (value: number, size: number) => {
+  if (!Number.isFinite(size) || size <= 0) {
+    return value;
+  }
+  const wrappedValue = value % size;
+  return wrappedValue < 0 ? wrappedValue + size : wrappedValue;
+};
 
 export function ScrubbableNumberInput({
   value,
@@ -60,12 +75,27 @@ export function ScrubbableNumberInput({
   'aria-labelledby': ariaLabelledBy,
   'aria-describedby': ariaDescribedBy,
 }: ScrubbableNumberInputProps) {
-  const startRef = useRef<{ x: number; value: number } | null>(null);
+  const scrubHandleRef = useRef<HTMLButtonElement | null>(null);
+  const startRef = useRef<{
+    x: number;
+    y: number;
+    value: number;
+    accumulatedDeltaX: number;
+    lastClientX: number;
+    lastClientY: number;
+  } | null>(null);
   const pointerIdRef = useRef<number | null>(null);
+  const activePointerTypeRef = useRef<string | null>(null);
   const [scrubFeedback, setScrubFeedback] = useState<ScrubFeedbackState>({
     isActive: false,
     deltaPx: 0,
     edgePressure: 0,
+  });
+  const [scrubCursor, setScrubCursor] = useState<ScrubCursorState>({
+    isVisible: false,
+    x: 0,
+    y: 0,
+    viewportWidth: 0,
   });
   const normalizedStep = Number.isFinite(step) && step > 0 ? step : 1;
   const minValue = typeof min === 'number' && Number.isFinite(min) ? min : null;
@@ -88,7 +118,41 @@ export function ScrubbableNumberInput({
   }, [boundedRange, value]);
 
   useEffect(() => {
+    const handlePointerLockChange = () => {
+      if (document.pointerLockElement === scrubHandleRef.current) {
+        return;
+      }
+      if (activePointerTypeRef.current !== 'mouse' || !startRef.current) {
+        return;
+      }
+      setScrubCursor((current) =>
+        current.isVisible ? { ...current, isVisible: false } : current,
+      );
+      document.body.style.cursor = 'ew-resize';
+    };
+
+    const handlePointerLockError = () => {
+      if (activePointerTypeRef.current !== 'mouse' || !startRef.current) {
+        return;
+      }
+      setScrubCursor((current) =>
+        current.isVisible ? { ...current, isVisible: false } : current,
+      );
+      document.body.style.cursor = 'ew-resize';
+    };
+
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    document.addEventListener('pointerlockerror', handlePointerLockError);
+
     return () => {
+      document.removeEventListener(
+        'pointerlockchange',
+        handlePointerLockChange,
+      );
+      document.removeEventListener('pointerlockerror', handlePointerLockError);
+      if (document.pointerLockElement === scrubHandleRef.current) {
+        document.exitPointerLock();
+      }
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
@@ -120,29 +184,115 @@ export function ScrubbableNumberInput({
     return 1;
   };
 
+  const endScrubInteraction = (
+    target?: HTMLButtonElement,
+    pointerId?: number,
+  ) => {
+    if (
+      target &&
+      typeof pointerId === 'number' &&
+      target.hasPointerCapture(pointerId)
+    ) {
+      target.releasePointerCapture(pointerId);
+    }
+    if (document.pointerLockElement === scrubHandleRef.current) {
+      document.exitPointerLock();
+    }
+    startRef.current = null;
+    pointerIdRef.current = null;
+    activePointerTypeRef.current = null;
+    setScrubFeedback({ isActive: false, deltaPx: 0, edgePressure: 0 });
+    setScrubCursor((current) =>
+      current.isVisible ? { ...current, isVisible: false } : current,
+    );
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (disabled || value === null) return;
     if (!Number.isFinite(value)) return;
     if (event.button !== 0) return;
     event.preventDefault();
-    startRef.current = { x: event.clientX, value };
+    startRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      value,
+      accumulatedDeltaX: 0,
+      lastClientX: event.clientX,
+      lastClientY: event.clientY,
+    };
     pointerIdRef.current = event.pointerId;
+    activePointerTypeRef.current = event.pointerType;
     setScrubFeedback({ isActive: true, deltaPx: 0, edgePressure: 0 });
     event.currentTarget.setPointerCapture(event.pointerId);
-    document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
+    if (event.pointerType === 'mouse') {
+      const viewportWidth =
+        typeof window === 'undefined' ? 0 : window.innerWidth;
+      setScrubCursor({
+        isVisible: true,
+        x: event.clientX,
+        y: event.clientY,
+        viewportWidth,
+      });
+      document.body.style.cursor = 'none';
+      try {
+        event.currentTarget.requestPointerLock();
+      } catch {
+        setScrubCursor((current) =>
+          current.isVisible ? { ...current, isVisible: false } : current,
+        );
+        document.body.style.cursor = 'ew-resize';
+      }
+      return;
+    }
+    document.body.style.cursor = 'ew-resize';
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (disabled || value === null) return;
-    if (!startRef.current || pointerIdRef.current !== event.pointerId) return;
+    const start = startRef.current;
+    if (!start || pointerIdRef.current !== event.pointerId) return;
     event.preventDefault();
-    const delta = event.clientX - startRef.current.x;
+    const movementX = Number.isFinite(event.movementX)
+      ? event.movementX
+      : event.clientX - start.lastClientX;
+    const movementY = Number.isFinite(event.movementY)
+      ? event.movementY
+      : event.clientY - start.lastClientY;
+    start.lastClientX = event.clientX;
+    start.lastClientY = event.clientY;
+
+    const isMouseScrub = activePointerTypeRef.current === 'mouse';
+    if (isMouseScrub) {
+      start.accumulatedDeltaX += movementX;
+      const viewportWidth =
+        typeof window === 'undefined' ? 0 : window.innerWidth;
+      const viewportHeight =
+        typeof window === 'undefined' ? 0 : window.innerHeight;
+      setScrubCursor((current) => {
+        const nextViewportWidth =
+          viewportWidth > 0
+            ? viewportWidth
+            : Math.max(1, current.viewportWidth);
+        const rawX = (current.isVisible ? current.x : start.x) + movementX;
+        const rawY = (current.isVisible ? current.y : start.y) + movementY;
+        return {
+          isVisible: true,
+          x: wrapCoordinate(rawX, nextViewportWidth),
+          y: Math.min(Math.max(rawY, 0), Math.max(0, viewportHeight - 1)),
+          viewportWidth: nextViewportWidth,
+        };
+      });
+    }
+
+    const delta = isMouseScrub
+      ? start.accumulatedDeltaX
+      : event.clientX - start.x;
     const multiplier = getMultiplier(event.nativeEvent);
     const valuePerPixel = (normalizedStep * multiplier) / pxPerStep;
-    const raw =
-      startRef.current.value +
-      (delta / pxPerStep) * normalizedStep * multiplier;
+    const raw = start.value + (delta / pxPerStep) * normalizedStep * multiplier;
     let edgePressure = 0;
 
     if (minValue !== null && raw < minValue && valuePerPixel > 0) {
@@ -168,14 +318,7 @@ export function ScrubbableNumberInput({
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (pointerIdRef.current !== event.pointerId) return;
-    startRef.current = null;
-    pointerIdRef.current = null;
-    setScrubFeedback({ isActive: false, deltaPx: 0, edgePressure: 0 });
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
+    endScrubInteraction(event.currentTarget, event.pointerId);
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,9 +357,47 @@ export function ScrubbableNumberInput({
   const edgePressureMagnitude = Math.abs(scrubFeedback.edgePressure);
   const edgeGlowWidthPercent = 8 + edgePressureMagnitude * 16;
   const showEdgeGlow = scrubFeedback.isActive && edgePressureMagnitude > 0.01;
+  const wrappedCursorOffsets =
+    scrubCursor.viewportWidth > 0
+      ? [0, -scrubCursor.viewportWidth, scrubCursor.viewportWidth]
+      : [0];
 
   return (
     <div className="relative">
+      {scrubCursor.isVisible && (
+        <div className="pointer-events-none fixed inset-0 z-[140] overflow-hidden">
+          {wrappedCursorOffsets.map((offset) => (
+            <div
+              key={offset}
+              className="absolute left-0 top-0 will-change-transform"
+              style={{
+                transform: `translate3d(${scrubCursor.x + offset}px, ${
+                  scrubCursor.y
+                }px, 0) translate(-50%, -50%)`,
+              }}
+            >
+              <svg
+                width="24"
+                height="18"
+                viewBox="0 0 24 18"
+                aria-hidden="true"
+                className="drop-shadow-[0_1px_2px_oklch(var(--background)/0.9)]"
+              >
+                <path
+                  d="M6 2L1 9L6 16V12H18V16L23 9L18 2V6H6V2Z"
+                  fill="oklch(var(--foreground) / 0.92)"
+                />
+                <path
+                  d="M6 2L1 9L6 16V12H18V16L23 9L18 2V6H6V2Z"
+                  fill="none"
+                  stroke="oklch(var(--background) / 0.86)"
+                  strokeWidth="1"
+                />
+              </svg>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="pointer-events-none absolute inset-y-[2px] left-7 right-[2px] z-0 overflow-hidden rounded-r-[5px]">
         <div className="absolute inset-x-0 bottom-[1px] h-px bg-border/40" />
         <div
@@ -250,6 +431,7 @@ export function ScrubbableNumberInput({
         )}
       </div>
       <button
+        ref={scrubHandleRef}
         type="button"
         tabIndex={-1}
         aria-label="Scrub value"
@@ -258,16 +440,11 @@ export function ScrubbableNumberInput({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onLostPointerCapture={() => {
-          startRef.current = null;
-          pointerIdRef.current = null;
-          setScrubFeedback({ isActive: false, deltaPx: 0, edgePressure: 0 });
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-        }}
+        onLostPointerCapture={() => endScrubInteraction()}
         className={cn(
           'absolute left-0 top-0 z-10 flex h-full w-6 items-center justify-center rounded-l-md border-r border-border/70 text-muted/70 transition-[color,background-color,border-color,transform,box-shadow] duration-300 ease-out-expo touch-none',
-          'cursor-ew-resize hover:text-foreground/90 hover:bg-background/80 active:bg-background active:scale-[0.985]',
+          scrubCursor.isVisible ? 'cursor-none' : 'cursor-ew-resize',
+          'hover:text-foreground/90 hover:bg-background/80 active:bg-background active:scale-[0.985]',
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:border-primary/50',
           scrubFeedback.isActive &&
             'bg-background/85 text-foreground/95 shadow-[inset_0_1px_0_oklch(var(--foreground)/0.06)]',
