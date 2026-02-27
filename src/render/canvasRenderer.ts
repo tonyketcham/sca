@@ -207,8 +207,7 @@ function drawSelectionOutline(
   state: { hovered: boolean; selected: boolean },
 ): void {
   const hoverOutlineWidth = 0.5 / zoom;
-  const selectedOutlineWidth = 1 / zoom;
-  const selectedInnerOutlineWidth = 0.5 / zoom;
+  const selectedReticleWidth = 1.25 / zoom;
   ctx.save();
   // Ensure we render the hover state underneath the selected state if both are somehow active
   if (state.hovered && !state.selected) {
@@ -217,24 +216,56 @@ function drawSelectionOutline(
     ctx.strokeRect(0, 0, bounds.width, bounds.height);
   }
   if (state.selected) {
-    // 1px primary border for clear selection without overpowering frame content.
-    ctx.strokeStyle = 'oklch(var(--primary))';
-    ctx.lineWidth = selectedOutlineWidth;
-    // We adjust strokeRect to account for the stroke width on the outside or center
-    // Standard strokeRect is centered, so we leave it as is, or we could inset it
-    ctx.strokeRect(0, 0, bounds.width, bounds.height);
-
-    // Add an inner ring for more tool-like precision
-    ctx.strokeStyle = 'oklch(var(--background) / 0.5)';
-    ctx.lineWidth = selectedInnerOutlineWidth;
-    const innerInset = selectedInnerOutlineWidth;
-    ctx.strokeRect(
-      innerInset,
-      innerInset,
-      bounds.width - innerInset * 2,
-      bounds.height - innerInset * 2,
-    );
+    drawSelectionReticle(ctx, bounds, zoom, selectedReticleWidth);
   }
+  ctx.restore();
+}
+
+function drawSelectionReticle(
+  ctx: CanvasRenderingContext2D,
+  bounds: SimulationState['bounds'],
+  zoom: number,
+  lineWidth: number,
+): void {
+  const offset = 5 / zoom;
+  const minDimension = Math.min(bounds.width, bounds.height);
+  const cornerLength = Math.min(
+    Math.max(minDimension * 0.16, 10 / zoom),
+    minDimension * 0.45,
+    26 / zoom,
+  );
+  const left = -offset;
+  const top = -offset;
+  const right = bounds.width + offset;
+  const bottom = bounds.height + offset;
+
+  ctx.save();
+  ctx.strokeStyle = 'oklch(var(--primary))';
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  // Top-left corner
+  ctx.moveTo(left + cornerLength, top);
+  ctx.lineTo(left, top);
+  ctx.lineTo(left, top + cornerLength);
+
+  // Top-right corner
+  ctx.moveTo(right - cornerLength, top);
+  ctx.lineTo(right, top);
+  ctx.lineTo(right, top + cornerLength);
+
+  // Bottom-right corner
+  ctx.moveTo(right, bottom - cornerLength);
+  ctx.lineTo(right, bottom);
+  ctx.lineTo(right - cornerLength, bottom);
+
+  // Bottom-left corner
+  ctx.moveTo(left + cornerLength, bottom);
+  ctx.lineTo(left, bottom);
+  ctx.lineTo(left, bottom - cornerLength);
+  ctx.stroke();
   ctx.restore();
 }
 
