@@ -16,7 +16,7 @@ import { SectionHeading } from './ui/section-heading';
 import { ColorSwatchField } from './ui/color-swatch-field';
 import { SwitchControlRow } from './ui/switch-control-row';
 import { LabeledField } from './ui/labeled-field';
-import { Settings2, RefreshCw } from 'lucide-react';
+import { Settings2, RefreshCw, Shuffle, RotateCcw } from 'lucide-react';
 
 type RightSidebarProps = {
   frames: FrameConfig[];
@@ -26,6 +26,8 @@ type RightSidebarProps = {
     options?: { rebuildSimulation?: boolean; seedOverride?: number },
   ) => void;
   onRegenerateObstacles: () => void;
+  onRandomizeSelectedFrames: () => void;
+  onResetSelectedFramesToDefault: () => void;
   unit: string;
 };
 
@@ -51,6 +53,8 @@ export default function RightSidebar({
   selectedFrameIndices,
   onUpdateSelectedFrames,
   onRegenerateObstacles,
+  onRandomizeSelectedFrames,
+  onResetSelectedFramesToDefault,
   unit,
 }: RightSidebarProps) {
   const controlsIdPrefix = useId();
@@ -217,9 +221,28 @@ export default function RightSidebar({
     <SidebarShell side="right">
       <SidebarHeader className="justify-between">
         <span>Inspector</span>
-        <span className="text-[10px] font-mono text-muted bg-surface py-0.5 px-2 rounded-full border border-border">
-          {selectedFrames.length} selected
-        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onRandomizeSelectedFrames}
+            className="h-6 w-6"
+            aria-label="Randomize selected frames"
+            title="Randomize selected frames"
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onResetSelectedFramesToDefault}
+            className="h-6 w-6"
+            aria-label="Reset selected frames to default"
+            title="Reset selected frames to default"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </SidebarHeader>
 
       <ScrollArea className="flex-1">

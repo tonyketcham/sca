@@ -56,10 +56,21 @@ type CompositeSvgOptions = {
   unit: Unit;
   widthInUnits: number;
   heightInUnits: number;
+  includeCanvasUi?: boolean;
+  selectedFrameIndices?: number[];
 };
 
 export function exportCompositeSvg(options: CompositeSvgOptions): string {
-  const { states, frames, grid, unit, widthInUnits, heightInUnits } = options;
+  const {
+    states,
+    frames,
+    grid,
+    unit,
+    widthInUnits,
+    heightInUnits,
+    includeCanvasUi,
+    selectedFrameIndices,
+  } = options;
   const widthPx = grid.cellWidth * grid.cols;
   const heightPx = grid.cellHeight * grid.rows;
   const unitLabel = UNIT_LABELS[unit];
@@ -110,10 +121,73 @@ export function exportCompositeSvg(options: CompositeSvgOptions): string {
     })
     .join('');
 
+  const selectedSet = new Set(selectedFrameIndices ?? []);
+  const frameBorders = includeCanvasUi
+    ? grid.cells
+        .map((cell, index) => {
+          if (!frames[index]) return '';
+          return `<rect x="${cell.offset.x.toFixed(2)}" y="${cell.offset.y.toFixed(2)}" width="${cell.bounds.width.toFixed(2)}" height="${cell.bounds.height.toFixed(2)}" fill="none" stroke="#7f858f" stroke-opacity="0.6" stroke-width="0.5" />`;
+        })
+        .join('')
+    : '';
+  const selectionReticles = includeCanvasUi
+    ? grid.cells
+        .map((cell, index) => {
+          if (!frames[index] || !selectedSet.has(index)) return '';
+          const reticlePath = buildSelectionReticlePath(
+            cell.offset.x,
+            cell.offset.y,
+            cell.bounds.width,
+            cell.bounds.height,
+          );
+          return `<path d="${reticlePath}" fill="none" stroke="#78b98a" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" />`;
+        })
+        .join('')
+    : '';
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${widthInUnits}${unitLabel}" height="${heightInUnits}${unitLabel}" viewBox="0 0 ${widthPx} ${heightPx}">
   <rect width="${widthPx}" height="${heightPx}" fill="#ffffff" />
   ${obstacleGroups}
   ${rootGroups}
+  ${frameBorders}
+  ${selectionReticles}
 </svg>`;
+}
+
+function buildSelectionReticlePath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): string {
+  const offset = 5;
+  const minDimension = Math.min(width, height);
+  const cornerLength = Math.min(
+    Math.max(minDimension * 0.16, 10),
+    minDimension * 0.45,
+    26,
+  );
+  const left = x - offset;
+  const top = y - offset;
+  const right = x + width + offset;
+  const bottom = y + height + offset;
+  return [
+    // Top-left corner
+    `M ${(left + cornerLength).toFixed(2)} ${top.toFixed(2)}`,
+    `L ${left.toFixed(2)} ${top.toFixed(2)}`,
+    `L ${left.toFixed(2)} ${(top + cornerLength).toFixed(2)}`,
+    // Top-right corner
+    `M ${(right - cornerLength).toFixed(2)} ${top.toFixed(2)}`,
+    `L ${right.toFixed(2)} ${top.toFixed(2)}`,
+    `L ${right.toFixed(2)} ${(top + cornerLength).toFixed(2)}`,
+    // Bottom-right corner
+    `M ${right.toFixed(2)} ${(bottom - cornerLength).toFixed(2)}`,
+    `L ${right.toFixed(2)} ${bottom.toFixed(2)}`,
+    `L ${(right - cornerLength).toFixed(2)} ${bottom.toFixed(2)}`,
+    // Bottom-left corner
+    `M ${(left + cornerLength).toFixed(2)} ${bottom.toFixed(2)}`,
+    `L ${left.toFixed(2)} ${bottom.toFixed(2)}`,
+    `L ${left.toFixed(2)} ${(bottom - cornerLength).toFixed(2)}`,
+  ].join(' ');
 }

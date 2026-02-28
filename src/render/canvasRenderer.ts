@@ -50,6 +50,7 @@ export type CompositeRenderOptions = {
   templateGrid?: TemplateGridSettings;
   hoveredFrameIndex?: number | null;
   selectedFrameIndices?: number[];
+  includeCanvasUi?: boolean;
 };
 
 export function renderSimulation(
@@ -127,6 +128,7 @@ export function renderComposite(
     templateGrid,
     hoveredFrameIndex,
     selectedFrameIndices,
+    includeCanvasUi,
   } = options;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
   if (mode === 'editor') {
@@ -164,6 +166,7 @@ export function renderComposite(
   }
 
   const selectedSet = new Set(selectedFrameIndices ?? []);
+  const shouldRenderCanvasUi = mode === 'editor' || includeCanvasUi === true;
 
   for (let index = 0; index < grid.cells.length; index += 1) {
     const cell = grid.cells[index];
@@ -173,7 +176,14 @@ export function renderComposite(
 
     ctx.save();
     ctx.translate(cell.offset.x, cell.offset.y);
-    renderFrame(ctx, state, frame.renderSettings, mode, view);
+    renderFrame(
+      ctx,
+      state,
+      frame.renderSettings,
+      mode,
+      view,
+      shouldRenderCanvasUi,
+    );
     if (mode === 'editor' && templateGrid?.showGutter && grid.gutterPx > 0) {
       const edges = {
         top: cell.row > 0,
@@ -184,14 +194,20 @@ export function renderComposite(
       drawGutterOverlay(ctx, state.bounds, grid.gutterPx * 0.5, edges);
     }
 
-    if (mode === 'editor') {
+    if (shouldRenderCanvasUi) {
       const isSelected = selectedSet.has(index);
-      const isHovered = hoveredFrameIndex === index;
+      const isHovered = mode === 'editor' && hoveredFrameIndex === index;
       if (isSelected || isHovered) {
-        drawSelectionOutline(ctx, state.bounds, view.zoom, {
-          hovered: isHovered,
-          selected: isSelected,
-        });
+        drawSelectionOutline(
+          ctx,
+          state.bounds,
+          view.zoom,
+          {
+            hovered: isHovered,
+            selected: isSelected,
+          },
+          mode,
+        );
       }
     }
     ctx.restore();
@@ -205,18 +221,28 @@ function drawSelectionOutline(
   bounds: SimulationState['bounds'],
   zoom: number,
   state: { hovered: boolean; selected: boolean },
+  mode: 'editor' | 'export',
 ): void {
   const hoverOutlineWidth = 0.5 / zoom;
   const selectedReticleWidth = 1.25 / zoom;
   ctx.save();
   // Ensure we render the hover state underneath the selected state if both are somehow active
   if (state.hovered && !state.selected) {
-    ctx.strokeStyle = 'oklch(var(--border-hover))';
+    ctx.strokeStyle =
+      mode === 'editor'
+        ? 'oklch(var(--border-hover))'
+        : 'rgba(127, 133, 143, 0.75)';
     ctx.lineWidth = hoverOutlineWidth;
     ctx.strokeRect(0, 0, bounds.width, bounds.height);
   }
   if (state.selected) {
-    drawSelectionReticle(ctx, bounds, zoom, selectedReticleWidth);
+    drawSelectionReticle(
+      ctx,
+      bounds,
+      zoom,
+      selectedReticleWidth,
+      mode === 'editor' ? 'oklch(var(--primary))' : '#78b98a',
+    );
   }
   ctx.restore();
 }
@@ -226,6 +252,7 @@ function drawSelectionReticle(
   bounds: SimulationState['bounds'],
   zoom: number,
   lineWidth: number,
+  strokeColor: string,
 ): void {
   const offset = 5 / zoom;
   const minDimension = Math.min(bounds.width, bounds.height);
@@ -240,7 +267,7 @@ function drawSelectionReticle(
   const bottom = bounds.height + offset;
 
   ctx.save();
-  ctx.strokeStyle = 'oklch(var(--primary))';
+  ctx.strokeStyle = strokeColor;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -287,6 +314,7 @@ function renderFrame(
   settings: RenderSettings,
   mode: 'editor' | 'export',
   view: ViewTransform,
+  includeFrameBorder: boolean,
 ): void {
   if (settings.showObstacles) {
     drawObstacles(ctx, state, settings);
@@ -300,9 +328,12 @@ function renderFrame(
   if (settings.showAttractors) {
     drawAttractors(ctx, state, settings);
   }
-  if (mode === 'editor') {
+  if (includeFrameBorder) {
     // Make the grid frame borders more subtle and precise
-    ctx.strokeStyle = 'oklch(var(--border) / 0.5)';
+    ctx.strokeStyle =
+      mode === 'editor'
+        ? 'oklch(var(--border) / 0.5)'
+        : 'rgba(127, 133, 143, 0.6)';
     ctx.lineWidth = 0.5 / view.zoom; // Keep it visually lighter for high-density displays.
     ctx.strokeRect(0, 0, state.bounds.width, state.bounds.height);
   }

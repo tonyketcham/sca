@@ -33,6 +33,7 @@ function toCompact(config: ConfigState): CompactConfig {
       config.paper.height,
       unitToCompact(config.paper.unit),
       config.paper.dpi,
+      config.paper.includeCanvasUiInExport ? 1 : 0,
     ],
     [
       config.templateGrid.rows,
@@ -71,6 +72,7 @@ function fromCompact(input: unknown): ConfigState | null {
         height: Number(paper[1]),
         unit: compactToUnit(paper[2]),
         dpi: Number(paper[3]),
+        includeCanvasUiInExport: version >= 11 ? Number(paper[4]) === 1 : false,
       },
       templateGrid: {
         rows: Number(grid[0]),
@@ -100,6 +102,7 @@ function fromCompact(input: unknown): ConfigState | null {
         height: Number(paper[1]),
         unit: compactToUnit(paper[2]),
         dpi: Number(paper[3]),
+        includeCanvasUiInExport: version >= 11 ? Number(paper[4]) === 1 : false,
       },
       templateGrid: {
         rows: Number(grid[0]),
@@ -170,6 +173,7 @@ function fromCompact(input: unknown): ConfigState | null {
       height: Number(paper[1]),
       unit: compactToUnit(paper[2]),
       dpi: Number(paper[3]),
+      includeCanvasUiInExport: false,
     },
     params: parsedParams,
     obstacles: {

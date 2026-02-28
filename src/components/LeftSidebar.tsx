@@ -7,6 +7,7 @@ import type {
   SavedEntry,
 } from '../types/ui';
 import type { Unit } from '../geometry/units';
+import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -73,7 +74,7 @@ export default function LeftSidebar({
   onPreviewEnd,
 }: LeftSidebarProps) {
   const [saveName, setSaveName] = useState('');
-  const [isSavedRunsModalOpen, setIsSavedRunsModalOpen] = useState(false);
+  const [isSavedRunsPopoverOpen, setIsSavedRunsPopoverOpen] = useState(false);
   const [previewedEntryId, setPreviewedEntryId] = useState<string | null>(null);
 
   const controlsIdPrefix = useId();
@@ -97,7 +98,7 @@ export default function LeftSidebar({
 
   const handleArchiveOpenChange = useCallback(
     (open: boolean) => {
-      setIsSavedRunsModalOpen(open);
+      setIsSavedRunsPopoverOpen(open);
       if (!open) {
         stopPreview();
       }
@@ -125,6 +126,13 @@ export default function LeftSidebar({
     [onDeleteEntry, previewedEntryId, stopPreview],
   );
 
+  const savedEntriesCountLabel =
+    savedEntries.length === 1 ? '1 item' : `${savedEntries.length} items`;
+  const archiveHintText =
+    savedEntries.length > 0
+      ? 'Hover or focus to preview'
+      : 'Create your first saved run';
+
   return (
     <SidebarShell side="left">
       <SidebarHeader>Project</SidebarHeader>
@@ -136,21 +144,21 @@ export default function LeftSidebar({
           selectedFrameIndices={selectedFrameIndices}
           headerAction={
             <Popover
-              open={isSavedRunsModalOpen}
+              open={isSavedRunsPopoverOpen}
               onOpenChange={handleArchiveOpenChange}
             >
               <PopoverTrigger asChild>
                 <Button
-                  variant={isSavedRunsModalOpen ? 'primary' : 'ghost'}
+                  variant={isSavedRunsPopoverOpen ? 'primary' : 'ghost'}
                   size="icon"
                   className="h-6 w-6"
                   aria-label={
-                    isSavedRunsModalOpen
+                    isSavedRunsPopoverOpen
                       ? 'Hide saved runs archive'
                       : 'Open saved runs archive'
                   }
                   title={
-                    isSavedRunsModalOpen
+                    isSavedRunsPopoverOpen
                       ? 'Hide saved runs archive'
                       : 'Open saved runs archive'
                   }
@@ -159,20 +167,33 @@ export default function LeftSidebar({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                side="right"
-                align="start"
-                sideOffset={12}
-                className="w-[min(25rem,calc(100vw-2rem))] p-3"
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                collisionPadding={12}
+                avoidCollisions
+                sticky="always"
+                className="w-[min(25rem,calc(100vw-2rem))] overflow-hidden p-0"
               >
                 <PopoverArrow width={12} height={8} />
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-border/70 pb-2">
-                    <SectionHeading>Saved Runs</SectionHeading>
-                    <span className="text-[10px] text-muted tabular-nums">
-                      {savedEntries.length} items
+                <div className="space-y-3 p-3">
+                  <div className="flex items-start justify-between rounded-[8px] border border-border/60 bg-surface/35 px-2.5 py-2 shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
+                    <div className="space-y-1">
+                      <SectionHeading>Saved Runs</SectionHeading>
+                      <p className="text-[10px] text-muted">
+                        Store reusable seeds and frame settings.
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-border/70 bg-background/40 px-2 py-0.5 text-[10px] text-foreground/85 tabular-nums">
+                      {savedEntriesCountLabel}
                     </span>
                   </div>
-                  <InsetPanel className="space-y-2">
+
+                  <InsetPanel
+                    padding="sm"
+                    tone="subtle"
+                    className="space-y-2.5"
+                  >
                     <LabeledField id={fieldId('save-name')} label="Name">
                       <Input
                         id={fieldId('save-name')}
@@ -182,58 +203,141 @@ export default function LeftSidebar({
                             e.target.value.slice(0, MAX_SAVE_NAME_LENGTH),
                           )
                         }
-                        placeholder="New save name"
-                        className="bg-background"
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') return;
+                          event.preventDefault();
+                          handleSaveCurrent();
+                        }}
+                        placeholder="e.g. Coral Canopy"
+                        className="bg-background/70"
                       />
                     </LabeledField>
                     <Button
                       variant="primary"
-                      className="w-full"
+                      className="h-7 w-full"
                       onClick={handleSaveCurrent}
                     >
-                      Save current state
+                      Save Current State
                     </Button>
                   </InsetPanel>
 
-                  <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
-                    {savedEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="group relative rounded-md border border-border bg-surface p-2.5 transition-all hover:border-borderHover"
-                        onMouseEnter={() => startPreview(entry.id)}
-                        onMouseLeave={stopPreview}
-                      >
-                        <div className="text-[12px] font-medium text-foreground mb-1 truncate">
-                          {entry.name}
-                        </div>
-                        <div className="text-[10px] text-muted mb-2">
-                          Seed: {entry.seed}{' '}
-                          {entry.randomizeSeed ? '(random)' : '(fixed)'}
-                        </div>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="secondary"
-                            size="compact"
-                            className="flex-1"
-                            onClick={() => onLoadEntry(entry.id)}
-                          >
-                            Load
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="compact"
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500/30"
-                            onClick={() => handleDeleteEntry(entry)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-0.5">
+                      <SectionHeading className="text-[9px]">
+                        Archive
+                      </SectionHeading>
+                      <span className="text-[10px] text-muted">
+                        {archiveHintText}
+                      </span>
+                    </div>
+
+                    <ScrollArea className="max-h-[50vh]">
+                      <div className="space-y-1.5 pb-0.5 pr-1">
+                        {savedEntries.map((entry) => {
+                          const isPreviewed = previewedEntryId === entry.id;
+                          return (
+                            <div
+                              key={entry.id}
+                              className={cn(
+                                'group relative rounded-[8px] border p-2.5 transition-all duration-300 ease-out-expo',
+                                isPreviewed
+                                  ? 'border-primary/45 bg-primary/10 shadow-[inset_0_1px_2px_rgba(0,0,0,0.22)]'
+                                  : 'border-border bg-surface hover:border-borderHover/90 hover:bg-surfaceHover/40',
+                              )}
+                              onMouseEnter={() => startPreview(entry.id)}
+                              onMouseLeave={(event) => {
+                                const activeElement = document.activeElement;
+                                if (
+                                  activeElement instanceof Node &&
+                                  event.currentTarget.contains(activeElement)
+                                ) {
+                                  return;
+                                }
+                                stopPreview();
+                              }}
+                              onFocusCapture={() => startPreview(entry.id)}
+                              onBlurCapture={(event) => {
+                                const nextFocusTarget = event.relatedTarget;
+                                if (
+                                  nextFocusTarget instanceof Node &&
+                                  event.currentTarget.contains(nextFocusTarget)
+                                ) {
+                                  return;
+                                }
+                                stopPreview();
+                              }}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[12px] font-medium text-foreground">
+                                    {entry.name}
+                                  </p>
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+                                    <span className="rounded-[4px] border border-border/70 bg-background/50 px-1.5 py-0.5 text-foreground/90 tabular-nums">
+                                      Seed {entry.seed}
+                                    </span>
+                                    <span className="rounded-[4px] border border-border/60 bg-surface/70 px-1.5 py-0.5 text-muted">
+                                      {entry.randomizeSeed
+                                        ? 'Randomized'
+                                        : 'Fixed Seed'}
+                                    </span>
+                                  </div>
+                                </div>
+                                {isPreviewed && (
+                                  <span className="shrink-0 rounded-full border border-primary/40 bg-primary/16 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-primary">
+                                    Preview
+                                  </span>
+                                )}
+                              </div>
+
+                              <div
+                                className={cn(
+                                  'mt-2 flex items-center gap-1.5 transition-all duration-300 ease-out-expo',
+                                  isPreviewed
+                                    ? 'translate-y-0 opacity-100 pointer-events-auto'
+                                    : 'translate-y-0.5 opacity-0 pointer-events-none group-hover:translate-y-0 group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto',
+                                )}
+                              >
+                                <Button
+                                  variant="secondary"
+                                  size="compact"
+                                  className="h-6 flex-1"
+                                  onClick={() => onLoadEntry(entry.id)}
+                                  aria-label={`Load ${entry.name}`}
+                                  title={`Load ${entry.name}`}
+                                >
+                                  Load
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="compact"
+                                  className="h-6 border-border/70 text-muted hover:border-borderHover hover:bg-surfaceHover/70 hover:text-foreground"
+                                  onClick={() => handleDeleteEntry(entry)}
+                                  aria-label={`Delete ${entry.name}`}
+                                  title={`Delete ${entry.name}`}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    </ScrollArea>
+
                     {savedEntries.length === 0 && (
-                      <div className="text-[11px] text-muted text-center py-4">
-                        No saved runs yet.
-                      </div>
+                      <InsetPanel
+                        padding="sm"
+                        tone="subtle"
+                        className="space-y-1 text-center"
+                      >
+                        <p className="text-[11px] text-foreground/90">
+                          No saved runs yet
+                        </p>
+                        <p className="text-[10px] text-muted">
+                          Save the current state to build your archive.
+                        </p>
+                      </InsetPanel>
                     )}
                   </div>
                 </div>
@@ -298,6 +402,16 @@ export default function LeftSidebar({
                 coarseness="coarse"
                 value={paper.dpi}
                 onValueChange={(next) => onPaperChange({ ...paper, dpi: next })}
+              />
+            </div>
+            <div className="space-y-2">
+              <SwitchControlRow
+                id={fieldId('paper-export-canvas-ui')}
+                label="Include canvas UI in export"
+                checked={paper.includeCanvasUiInExport}
+                onCheckedChange={(checked) =>
+                  onPaperChange({ ...paper, includeCanvasUiInExport: checked })
+                }
               />
             </div>
           </div>

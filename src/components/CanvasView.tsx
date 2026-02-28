@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import type { SimulationState, Vec2 } from '../engine/simulationState';
 import { stepSimulation } from '../engine/spaceColonization';
 import {
@@ -20,10 +20,37 @@ type CanvasViewProps = {
   onClearSelection: () => void;
   running: boolean;
   canvasRef: RefObject<HTMLCanvasElement | null>;
+  viewCommand: CanvasViewCommand | null;
+  fitInsets?: Partial<CanvasViewportInsets>;
+  onZoomChange?: (zoom: number) => void;
 };
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
+const DEFAULT_VIEWPORT_INSETS: CanvasViewportInsets = {
+  top: 24,
+  right: 24,
+  bottom: 24,
+  left: 24,
+};
+
+export type CanvasViewportInsets = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+export type CanvasViewCommand =
+  | {
+      type: 'setZoom';
+      zoom: number;
+      commandId: number;
+    }
+  | {
+      type: 'zoomToFit';
+      commandId: number;
+    };
 
 export default function CanvasView({
   simulationRef,
@@ -36,6 +63,9 @@ export default function CanvasView({
   onClearSelection,
   running,
   canvasRef,
+  viewCommand,
+  fitInsets,
+  onZoomChange,
 }: CanvasViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<ViewTransform>({
@@ -52,6 +82,147 @@ export default function CanvasView({
   } | null>(null);
   const hoveredFrameRef = useRef<number | null>(null);
   const frameRef = useRef<number | null>(null);
+  const lastReportedZoomRef = useRef<number | null>(null);
+  const normalizedInsets = useMemo(
+    () => normalizeViewportInsets(fitInsets),
+    [fitInsets],
+  );
+
+  const reportZoom = useCallback(
+    (zoom: number) => {
+      if (!onZoomChange) return;
+      const rounded = Math.round(zoom * 10000) / 10000;
+      if (
+        lastReportedZoomRef.current !== null &&
+        Math.abs(lastReportedZoomRef.current - rounded) < 0.0001
+      ) {
+        return;
+      }
+      lastReportedZoomRef.current = rounded;
+      onZoomChange(zoom);
+    },
+    [onZoomChange],
+  );
+
+  const getCompositeBounds = useCallback(
+    () => ({
+      width: gridLayout.cellWidth * gridLayout.cols,
+      height: gridLayout.cellHeight * gridLayout.rows,
+    }),
+    [
+      gridLayout.cellHeight,
+      gridLayout.cellWidth,
+      gridLayout.cols,
+      gridLayout.rows,
+    ],
+  );
+
+  const getViewportRect = useCallback(() => {
+    const { width, height } = canvasSizeRef.current;
+    const leftInset = Math.min(Math.max(0, normalizedInsets.left), width - 1);
+    const topInset = Math.min(Math.max(0, normalizedInsets.top), height - 1);
+    const maxRightInset = Math.max(0, width - leftInset - 1);
+    const maxBottomInset = Math.max(0, height - topInset - 1);
+    const rightInset = Math.min(
+      Math.max(0, normalizedInsets.right),
+      maxRightInset,
+    );
+    const bottomInset = Math.min(
+      Math.max(0, normalizedInsets.bottom),
+      maxBottomInset,
+    );
+    const viewportWidth = Math.max(1, width - leftInset - rightInset);
+    const viewportHeight = Math.max(1, height - topInset - bottomInset);
+    return {
+      left: leftInset,
+      top: topInset,
+      width: viewportWidth,
+      height: viewportHeight,
+      center: {
+        x: leftInset + viewportWidth * 0.5,
+        y: topInset + viewportHeight * 0.5,
+      },
+    };
+  }, [
+    normalizedInsets.bottom,
+    normalizedInsets.left,
+    normalizedInsets.right,
+    normalizedInsets.top,
+  ]);
+
+  const applyZoomAtPointer = useCallback(
+    (pointer: Vec2, requestedZoom: number) => {
+      const bounds = getCompositeBounds();
+      const { width, height } = canvasSizeRef.current;
+      const nextZoom = clamp(requestedZoom, MIN_ZOOM, MAX_ZOOM);
+      const currentZoom = viewRef.current.zoom;
+      if (Math.abs(nextZoom - currentZoom) < 0.0001) return;
+
+      const origin = getArtboardOrigin(width, height, bounds, viewRef.current);
+      const worldPoint = {
+        x: (pointer.x - origin.x) / currentZoom,
+        y: (pointer.y - origin.y) / currentZoom,
+      };
+      const nextOrigin = {
+        x: pointer.x - worldPoint.x * nextZoom,
+        y: pointer.y - worldPoint.y * nextZoom,
+      };
+
+      viewRef.current.zoom = nextZoom;
+      viewRef.current.pan = {
+        x: nextOrigin.x - (width - bounds.width * nextZoom) * 0.5,
+        y: nextOrigin.y - (height - bounds.height * nextZoom) * 0.5,
+      };
+      reportZoom(nextZoom);
+    },
+    [getCompositeBounds, reportZoom],
+  );
+
+  const setZoomAroundViewportCenter = useCallback(
+    (requestedZoom: number) => {
+      const viewport = getViewportRect();
+      applyZoomAtPointer(viewport.center, requestedZoom);
+    },
+    [applyZoomAtPointer, getViewportRect],
+  );
+
+  const zoomToFit = useCallback(() => {
+    const bounds = getCompositeBounds();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    const { width: canvasWidth, height: canvasHeight } = canvasSizeRef.current;
+    const viewport = getViewportRect();
+    const nextZoom = clamp(
+      Math.min(viewport.width / bounds.width, viewport.height / bounds.height),
+      MIN_ZOOM,
+      MAX_ZOOM,
+    );
+    const targetOriginX =
+      viewport.left + (viewport.width - bounds.width * nextZoom) * 0.5;
+    const targetOriginY =
+      viewport.top + (viewport.height - bounds.height * nextZoom) * 0.5;
+
+    viewRef.current.zoom = nextZoom;
+    viewRef.current.pan = {
+      x: targetOriginX - (canvasWidth - bounds.width * nextZoom) * 0.5,
+      y: targetOriginY - (canvasHeight - bounds.height * nextZoom) * 0.5,
+    };
+    reportZoom(nextZoom);
+  }, [getCompositeBounds, getViewportRect, reportZoom]);
+
+  useEffect(() => {
+    reportZoom(viewRef.current.zoom);
+  }, [reportZoom]);
+
+  useEffect(() => {
+    if (!viewCommand) return;
+    if (viewCommand.type === 'zoomToFit') {
+      zoomToFit();
+      return;
+    }
+    if (viewCommand.type === 'setZoom') {
+      setZoomAroundViewportCenter(viewCommand.zoom);
+    }
+  }, [setZoomAroundViewportCenter, viewCommand, zoomToFit]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -170,34 +341,6 @@ export default function CanvasView({
       viewRef.current.pan.y += deltaY;
     };
 
-    const applyZoom = (pointer: Vec2, nextZoom: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const { zoom } = viewRef.current;
-      if (nextZoom === zoom) return;
-
-      const bounds = {
-        width: gridLayout.cellWidth * gridLayout.cols,
-        height: gridLayout.cellHeight * gridLayout.rows,
-      };
-      const { width, height } = canvasSizeRef.current;
-      const origin = getArtboardOrigin(width, height, bounds, viewRef.current);
-      const worldPoint = {
-        x: (pointer.x - origin.x) / zoom,
-        y: (pointer.y - origin.y) / zoom,
-      };
-      const nextOrigin = {
-        x: pointer.x - worldPoint.x * nextZoom,
-        y: pointer.y - worldPoint.y * nextZoom,
-      };
-
-      viewRef.current.zoom = nextZoom;
-      viewRef.current.pan = {
-        x: nextOrigin.x - (width - bounds.width * nextZoom) * 0.5,
-        y: nextOrigin.y - (height - bounds.height * nextZoom) * 0.5,
-      };
-    };
-
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
       const canvas = canvasRef.current;
@@ -222,15 +365,11 @@ export default function CanvasView({
         MIN_ZOOM,
         MAX_ZOOM,
       );
-      applyZoom(pointer, nextZoom);
+      applyZoomAtPointer(pointer, nextZoom);
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
       const panStep = event.shiftKey ? 96 : 48;
-      const center = {
-        x: canvasSizeRef.current.width * 0.5,
-        y: canvasSizeRef.current.height * 0.5,
-      };
       let handled = true;
       switch (event.key) {
         case 'ArrowLeft':
@@ -247,21 +386,16 @@ export default function CanvasView({
           break;
         case '=':
         case '+':
-          applyZoom(
-            center,
-            clamp(viewRef.current.zoom * 1.1, MIN_ZOOM, MAX_ZOOM),
-          );
+          setZoomAroundViewportCenter(viewRef.current.zoom * 1.1);
           break;
         case '-':
         case '_':
-          applyZoom(
-            center,
-            clamp(viewRef.current.zoom * 0.9, MIN_ZOOM, MAX_ZOOM),
-          );
+          setZoomAroundViewportCenter(viewRef.current.zoom * 0.9);
           break;
         case '0':
           viewRef.current.pan = { x: 0, y: 0 };
           viewRef.current.zoom = 1;
+          reportZoom(1);
           break;
         default:
           handled = false;
@@ -289,9 +423,12 @@ export default function CanvasView({
   }, [
     canvasRef,
     gridLayout,
+    applyZoomAtPointer,
+    setZoomAroundViewportCenter,
     onClearSelection,
     onSelectFrame,
     onToggleFrame,
+    reportZoom,
     simulationRef,
   ]);
 
@@ -380,7 +517,7 @@ export default function CanvasView({
         ref={canvasRef}
         className="block h-full w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-0 focus-visible:ring-inset cursor-grab active:cursor-grabbing"
         tabIndex={0}
-        aria-label="Simulation canvas. Drag to pan, scroll to zoom, use arrow keys to pan, plus and minus to zoom, and zero to reset view."
+        aria-label="Simulation canvas. Drag to pan, scroll to zoom, use arrow keys to pan, plus and minus to zoom, zero to reset view, or use the zoom menu in the toolbar."
       />
       {viewHints}
     </div>
@@ -389,6 +526,25 @@ export default function CanvasView({
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeViewportInsets(
+  insets: Partial<CanvasViewportInsets> | undefined,
+): CanvasViewportInsets {
+  return {
+    top: finiteInset(insets?.top, DEFAULT_VIEWPORT_INSETS.top),
+    right: finiteInset(insets?.right, DEFAULT_VIEWPORT_INSETS.right),
+    bottom: finiteInset(insets?.bottom, DEFAULT_VIEWPORT_INSETS.bottom),
+    left: finiteInset(insets?.left, DEFAULT_VIEWPORT_INSETS.left),
+  };
+}
+
+function finiteInset(value: number | undefined, fallback: number): number {
+  const numericValue = typeof value === 'number' ? value : Number.NaN;
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+  return Math.max(0, numericValue);
 }
 
 function getFrameIndexAtPoint(

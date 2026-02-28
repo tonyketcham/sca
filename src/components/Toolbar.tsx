@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from './ui/select';
-import { Play, Pause, RotateCcw, Download } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import {
+  ChevronDown,
+  Download,
+  Pause,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Search,
+} from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { cn } from '../lib/utils';
 import type { StatsSummary } from '../types/ui';
@@ -9,7 +18,8 @@ import type { StatsSummary } from '../types/ui';
 type ToolbarProps = {
   running: boolean;
   onToggleRunning: () => void;
-  onResetSimulation: () => void;
+  onReplaySimulation: () => void;
+  onRegenerateSimulation: () => void;
   stats: StatsSummary;
   onExportPng: () => void;
   onExportSvg: () => void;
@@ -17,6 +27,10 @@ type ToolbarProps = {
   exportError: string | null;
   isExportingMp4: boolean;
   onDismissExportError: () => void;
+  zoomPercent: number;
+  onSetZoomPercent: (zoomPercent: number) => void;
+  onZoomToFit: () => void;
+  onOverlayBottomChange?: (bottomPx: number) => void;
   hasFrameSelection?: boolean;
   selectedFramesCount?: number;
 };
@@ -31,6 +45,7 @@ const exportFormatLabels: Record<ExportFormat, string> = {
 
 const statTransitionDurationMs = 220;
 const easeOutExpo = [0.16, 1, 0.3, 1] as const;
+const zoomPresets = [25, 50, 75, 100, 125, 150, 200, 300, 400] as const;
 
 const toolbarEntryVariants = {
   hidden: { opacity: 0, y: -14, filter: 'blur(4px)' },
@@ -115,11 +130,11 @@ function AnimatedStatValue({
   }, [currentValue, prefersReducedMotion, value]);
 
   return (
-    <span className="relative inline-grid h-[1.1em] min-w-[4ch] place-items-center tabular-nums">
+    <span className="relative inline-grid h-[1.1em] min-w-[4ch] place-items-center leading-none tabular-nums">
       {outgoingValue !== null && (
         <span
           className={cn(
-            'col-start-1 row-start-1 transition-all duration-200 ease-out-expo',
+            'col-start-1 row-start-1 leading-none transition-all duration-200 ease-out-expo',
             isAnimating
               ? '-translate-y-1 opacity-0'
               : 'translate-y-0 opacity-100',
@@ -130,7 +145,7 @@ function AnimatedStatValue({
       )}
       <span
         className={cn(
-          'col-start-1 row-start-1 text-foreground transition-all duration-200 ease-out-expo',
+          'col-start-1 row-start-1 leading-none text-foreground transition-all duration-200 ease-out-expo',
           isAnimating && 'translate-y-[1px] text-primary',
         )}
       >
@@ -143,7 +158,8 @@ function AnimatedStatValue({
 export default function Toolbar({
   running,
   onToggleRunning,
-  onResetSimulation,
+  onReplaySimulation,
+  onRegenerateSimulation,
   stats,
   onExportPng,
   onExportSvg,
@@ -151,9 +167,43 @@ export default function Toolbar({
   exportError,
   isExportingMp4,
   onDismissExportError,
+  zoomPercent,
+  onSetZoomPercent,
+  onZoomToFit,
+  onOverlayBottomChange,
 }: ToolbarProps) {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
+  const [zoomMenuOpen, setZoomMenuOpen] = useState(false);
+  const toolbarRootRef = useRef<HTMLDivElement>(null);
+  const safeZoomPercent = clampZoomPercent(zoomPercent);
+
+  useEffect(() => {
+    if (!onOverlayBottomChange) return undefined;
+    const toolbarNode = toolbarRootRef.current;
+    if (!toolbarNode) return undefined;
+
+    const notifyToolbarBounds = () => {
+      const offsetParent = toolbarNode.offsetParent;
+      if (!(offsetParent instanceof HTMLElement)) {
+        return;
+      }
+      const toolbarRect = toolbarNode.getBoundingClientRect();
+      const parentRect = offsetParent.getBoundingClientRect();
+      const bottomPx = Math.max(0, toolbarRect.bottom - parentRect.top);
+      onOverlayBottomChange(bottomPx);
+    };
+
+    notifyToolbarBounds();
+    const resizeObserver = new ResizeObserver(() => notifyToolbarBounds());
+    resizeObserver.observe(toolbarNode);
+    window.addEventListener('resize', notifyToolbarBounds);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', notifyToolbarBounds);
+    };
+  }, [onOverlayBottomChange]);
 
   const handleExport = () => {
     if (exportFormat === 'png') {
@@ -173,7 +223,10 @@ export default function Toolbar({
     : `Export ${exportFormatLabels[exportFormat]}`;
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+    <div
+      ref={toolbarRootRef}
+      className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2"
+    >
       <motion.div
         className="flex flex-col items-center gap-2"
         initial={prefersReducedMotion ? false : 'hidden'}
@@ -204,13 +257,24 @@ export default function Toolbar({
               </Button>
             </div>
             <Button
-              onClick={onResetSimulation}
+              onClick={onReplaySimulation}
               variant="ghost"
               size="icon"
               className="rounded-full h-8 w-8"
-              aria-label="Reset"
+              aria-label="Replay simulation with current seed"
+              title="Replay simulation (keep current seed)"
             >
               <RotateCcw className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={onRegenerateSimulation}
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-8 w-8"
+              aria-label="Regenerate simulation"
+              title="Regenerate simulation (new seed when randomize seed is on)"
+            >
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </motion.div>
 
@@ -220,37 +284,39 @@ export default function Toolbar({
           ></motion.div>
 
           <motion.div
-            className="flex items-center gap-4 text-[11px] font-mono tracking-widest text-muted uppercase"
+            className="flex h-10 items-center gap-4 text-[11px] leading-none font-mono tracking-widest text-muted uppercase"
             variants={statsContainerVariants}
           >
             <motion.div
-              className="flex flex-col items-center"
+              className="flex h-full flex-col items-center justify-center gap-0.5"
               variants={statItemVariants}
             >
-              <span className="text-[9px] opacity-70">Nodes</span>
+              <span className="text-[9px] leading-none opacity-70">Nodes</span>
               <AnimatedStatValue
                 value={stats.nodes}
                 prefersReducedMotion={prefersReducedMotion}
               />
             </motion.div>
             <motion.div
-              className="flex flex-col items-center"
+              className="flex h-full flex-col items-center justify-center gap-0.5"
               variants={statItemVariants}
             >
-              <span className="text-[9px] opacity-70">Targets</span>
+              <span className="text-[9px] leading-none opacity-70">
+                Targets
+              </span>
               <AnimatedStatValue
                 value={stats.attractors}
                 prefersReducedMotion={prefersReducedMotion}
               />
             </motion.div>
             <motion.div
-              className="flex flex-col items-center"
+              className="flex h-full flex-col items-center justify-center gap-0.5"
               variants={statItemVariants}
             >
-              <span className="text-[9px] opacity-70">Status</span>
+              <span className="text-[9px] leading-none opacity-70">Status</span>
               <span
                 className={cn(
-                  'transition-colors duration-300 ease-out-expo',
+                  'inline-flex h-[1.1em] min-w-[4ch] items-center justify-center leading-none transition-colors duration-300 ease-out-expo',
                   stats.completed ? 'text-primary' : 'text-foreground',
                 )}
               >
@@ -268,21 +334,90 @@ export default function Toolbar({
             className="flex h-10 items-center rounded-full border border-border/70 bg-surface/70 p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]"
             variants={toolbarGroupVariants}
           >
+            <Popover open={zoomMenuOpen} onOpenChange={setZoomMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="compact"
+                  className="h-8 w-[100px] rounded-full px-2 text-muted hover:bg-surfaceHover/80 hover:text-foreground"
+                  aria-label={`Canvas zoom ${safeZoomPercent} percent`}
+                >
+                  <span className="inline-grid w-full grid-cols-[0.875rem_minmax(0,1fr)_0.875rem] items-center gap-1">
+                    <Search className="h-3.5 w-3.5 opacity-85" />
+                    <span className="min-w-[4ch] text-center tabular-nums text-[11px] leading-none tracking-[0.03em] text-foreground">
+                      {safeZoomPercent}%
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'h-3.5 w-3.5 transition-transform duration-300 ease-out-expo',
+                        zoomMenuOpen && 'rotate-180',
+                      )}
+                    />
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-[196px]">
+                <div className="grid gap-1">
+                  <Button
+                    variant="ghost"
+                    size="compact"
+                    onClick={() => {
+                      onZoomToFit();
+                      setZoomMenuOpen(false);
+                    }}
+                    className="h-7 justify-start rounded-lg px-2 text-[11px] tracking-[0.03em] text-foreground"
+                  >
+                    Zoom to fit
+                  </Button>
+                  <div className="my-1 h-px bg-border/70" />
+                  <div className="grid grid-cols-3 gap-1">
+                    {zoomPresets.map((preset) => (
+                      <Button
+                        key={preset}
+                        variant={
+                          safeZoomPercent === preset ? 'primary' : 'ghost'
+                        }
+                        size="compact"
+                        onClick={() => {
+                          onSetZoomPercent(preset);
+                          setZoomMenuOpen(false);
+                        }}
+                        className="h-7 rounded-md px-0 text-[10px] tabular-nums"
+                      >
+                        {preset}%
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </motion.div>
+
+          <motion.div
+            className="h-4 w-px bg-border"
+            variants={toolbarGroupVariants}
+          ></motion.div>
+
+          <motion.div
+            className="flex h-10 items-center rounded-full border border-border/70 bg-surface/70 p-0.5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]"
+            variants={toolbarGroupVariants}
+          >
             <Button
               onClick={handleExport}
               variant="ghost"
               size="compact"
-              className="h-8 w-32 rounded-full px-3 whitespace-nowrap text-foreground hover:bg-surfaceHover/80"
+              className="h-8 w-[88px] rounded-full px-2 whitespace-nowrap text-foreground hover:bg-surfaceHover/80"
               aria-label={exportAriaLabel}
               disabled={isExportingSelectedMp4}
             >
-              <Download className="h-4 w-4 text-muted" />
-              <span>{isExportingSelectedMp4 ? 'Exporting...' : 'Export'}</span>
-              {!isExportingSelectedMp4 && (
-                <span className="text-foreground">
-                  {exportFormatLabels[exportFormat]}
+              <span className="inline-grid w-full grid-cols-[1rem_minmax(0,1fr)] items-center gap-1.5">
+                <Download className="h-4 w-4 text-muted" />
+                <span className="text-center text-[11px] leading-none tracking-[0.04em] text-foreground">
+                  {isExportingSelectedMp4
+                    ? 'MP4...'
+                    : exportFormatLabels[exportFormat]}
                 </span>
-              )}
+              </span>
             </Button>
             <Select
               value={exportFormat}
@@ -322,4 +457,12 @@ export default function Toolbar({
       </motion.div>
     </div>
   );
+}
+
+function clampZoomPercent(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 100;
+  }
+  const rounded = Math.round(value);
+  return Math.min(400, Math.max(20, rounded));
 }

@@ -3,12 +3,21 @@ import type {
   ExportSettings,
   FrameConfig,
   ObstacleSettings,
+  PaperSettings,
   TemplateGridSettings,
 } from '../types/ui';
 import type { SimulationParams } from '../engine/simulationState';
 import type { RenderSettings } from '../render/canvasRenderer';
 
-export const LATEST_SCHEMA_VERSION = 10;
+export const LATEST_SCHEMA_VERSION = 11;
+
+const DEFAULT_PAPER: PaperSettings = {
+  width: 8.5,
+  height: 11,
+  unit: 'in',
+  dpi: 96,
+  includeCanvasUiInExport: false,
+};
 
 type Migration = (input: any) => any;
 
@@ -33,14 +42,11 @@ const migrations: Record<number, Migration> = {
   3: (input) => ({
     ...input,
     schemaVersion: 3,
-    paper: {
-      ...input.paper,
-      unit: isUnit(input.paper.unit) ? input.paper.unit : 'in',
-    },
+    paper: normalizePaper(input.paper),
   }),
   4: (input) => ({
     schemaVersion: 4,
-    paper: { ...input.paper },
+    paper: normalizePaper(input.paper),
     templateGrid: normalizeTemplateGrid(input.templateGrid),
     frames: normalizeFrames(input),
     activeFrameIndex: Number.isFinite(input.activeFrameIndex)
@@ -57,7 +63,7 @@ const migrations: Record<number, Migration> = {
       : [legacyIndex];
     return {
       schemaVersion: 5,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(selectionSource, frames.length),
@@ -67,7 +73,7 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 6,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(
@@ -80,7 +86,7 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 7,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(
@@ -93,7 +99,7 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 8,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(
@@ -106,7 +112,7 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 9,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(
@@ -119,7 +125,20 @@ const migrations: Record<number, Migration> = {
     const frames = normalizeFrames(input);
     return {
       schemaVersion: 10,
-      paper: { ...input.paper },
+      paper: normalizePaper(input.paper),
+      templateGrid: normalizeTemplateGrid(input.templateGrid),
+      frames,
+      selectedFrameIndices: normalizeSelection(
+        input.selectedFrameIndices,
+        frames.length,
+      ),
+    };
+  },
+  11: (input) => {
+    const frames = normalizeFrames(input);
+    return {
+      schemaVersion: 11,
+      paper: normalizePaper(input.paper),
       templateGrid: normalizeTemplateGrid(input.templateGrid),
       frames,
       selectedFrameIndices: normalizeSelection(
@@ -169,6 +188,24 @@ function isSeedEdge(value: unknown): value is SimulationParams['seedEdge'] {
 
 function isUnit(value: unknown): value is ConfigState['paper']['unit'] {
   return value === 'in' || value === 'cm' || value === 'mm';
+}
+
+function normalizePaper(
+  input: Partial<PaperSettings> | undefined,
+): PaperSettings {
+  const width = finiteNumber(input?.width, DEFAULT_PAPER.width);
+  const height = finiteNumber(input?.height, DEFAULT_PAPER.height);
+  const dpi = finiteNumber(input?.dpi, DEFAULT_PAPER.dpi);
+  return {
+    width: width > 0 ? width : DEFAULT_PAPER.width,
+    height: height > 0 ? height : DEFAULT_PAPER.height,
+    unit: isUnit(input?.unit) ? input.unit : DEFAULT_PAPER.unit,
+    dpi: dpi > 0 ? dpi : DEFAULT_PAPER.dpi,
+    includeCanvasUiInExport:
+      typeof input?.includeCanvasUiInExport === 'boolean'
+        ? input.includeCanvasUiInExport
+        : DEFAULT_PAPER.includeCanvasUiInExport,
+  };
 }
 
 function normalizeTemplateGrid(
